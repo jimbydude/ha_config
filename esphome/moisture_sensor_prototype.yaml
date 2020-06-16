@@ -4,11 +4,18 @@ substitutions:
   location: Test
   reboot_timeout: 1h
   update_interval: 10min
+  update_interval_short: 10s
   sliding_window: "15"
   i2c_sda: D2
   i2c_scl: D1
   i2c_scan: 'True'
   i2c_device: ads115_a
+  ads_address: '0x48'
+  adc_a0_icon: "mdi:water-percent"
+  adc_a0_accuracy_decimals: '1'
+  adc_a0_unit_of_measurement: "%"
+  adc_va0_icon: "mdi:water-percent"
+  adc_gain: '0.256'
 
 esphome:
   name: ${device}
@@ -25,9 +32,7 @@ esphome:
 # I2C Iniitalisation
 #
 <<: !include common/i2c.yaml
-
-ads1115:
-    - address: 0x48
+<<: !include common/analog_sensor/ads1115.yaml
     
 globals:
    - id: sensor_open_value
@@ -67,75 +72,14 @@ globals:
 #################################################################
 # Sensor Configuration
 #################################################################
+
 sensor:
   - !include common/sensor/wifi-signal.yaml
   - !include common/sensor/uptime.yaml
-  # replace with one for dht11 - !include common/sensor/bme280.yaml
+  - !include common/sensor/dht11.yaml
+  # Soil Sensore on Analog Pin A0
+  - !include common/analog_sensor/adc_a0.yaml
 
-#################################################################
-# DHT11 Temperature and Humidity Sensor
-#################################################################
-  - platform: dht
-    pin: D7
-    model: DHT11
-    update_interval: ${update_interval}
-    temperature:
-      name: ${name} Temperature
-      filters:
-        - sliding_window_moving_average:
-            window_size: ${sliding_window}
-            send_every: ${sliding_window}
-            send_first_at: 1
-    humidity:
-      name: ${name} Humidity
-      filters:
-        - sliding_window_moving_average:
-            window_size: ${sliding_window}
-            send_every: ${sliding_window}
-            send_first_at: 1
-#################################################################
-# Soil Sensore on Analog Pin A0
-#################################################################
-  - platform: adc
-    name: ${name} A0
-    pin: A0
-    id: soil_sensor_a0
-    update_interval: 5s
-    unit_of_measurement: "%"
-    icon: "mdi:water-percent"
-    accuracy_decimals: 1
-    filters:
-      # - sliding_window_moving_average:
-      #     window_size:  ${sliding_window}
-      #     send_every:  ${sliding_window}
-      #     send_first_at: 1
-      - lambda: |-
-          if (x > id(a0_air) || x < id(sensor_open_value)) {
-            return 0.0;
-          } else if (x < id(a0_water)) {
-            return 100.0;
-          } else {
-            return (id(a0_air)-x) / (id(a0_air)-id(a0_water)) * 100.0;
-          }
-    on_value:
-      then:
-        - lambda: |-
-            if ( id(soil_sensor_a0).raw_state < id(sensor_open_value) ){
-              auto call = id(a0_status_led).turn_off();
-              call.perform();  
-            } else if (x < id(danger_threshold) ) {
-              auto call = id(a0_status_led).turn_on();
-              call.set_brightness(id(led_max_brightness));
-              call.set_effect("Danger Will Robinson");
-              call.perform();  
-            } else {
-              auto call = id(a0_status_led).turn_on();
-              call.set_brightness(id(led_max_brightness));
-              call.set_effect("none");
-              call.set_rgb((100.0-id(soil_sensor_a0).state)/100.0, id(soil_sensor_a0).state/100.0, 0.0);
-              call.perform();  
-            }
-        
 ### END OF SENSOR CONFIG BLOCK
 
 ################################################################
@@ -145,12 +89,12 @@ sensor:
   - platform: ads1115
     name: ADS1115 A0 ${name}
     multiplexer: 'A0_GND'
-    id: soil_sensor_va0
-    unit_of_measurement: "%"
-    icon: "mdi:water-percent"
-    accuracy_decimals: 1
-    gain: 0.256
-    update_interval: 5s
+    id: ${device}_va0
+    unit_of_measurement: ${adc_a0_unit_of_measurement}
+    icon: ${adc_va0_icon}
+    accuracy_decimals: ${adc_a0_accuracy_decimals}
+    gain: ${adc_gain}
+    update_interval: ${update_interval_short}
     filters:
       # - sliding_window_moving_average:
       #     window_size:  ${sliding_window}
@@ -167,7 +111,7 @@ sensor:
     on_value:
       then:
         - lambda: |-
-            if ( id(soil_sensor_va0).raw_state < id(sensor_open_value) ){
+            if ( id(${device}_va0).raw_state < id(sensor_open_value) ){
               auto call = id(va0_status_led).turn_off();
               call.perform();  
             } else if (x < id(danger_threshold) ) {
@@ -179,7 +123,7 @@ sensor:
               auto call = id(va0_status_led).turn_on();
               call.set_brightness(id(led_max_brightness));
               call.set_effect("none");
-              call.set_rgb((100.0-id(soil_sensor_va0).state)/100.0, id(soil_sensor_va0).state/100.0, 0.0);
+              call.set_rgb((100.0-id(${device}_va0).state)/100.0, id(${device}_va0).state/100.0, 0.0);
               call.perform();  
             }
 
@@ -365,10 +309,10 @@ display:
           int i = 0;
           char str[10];
           // TEST
-          sprintf( str, "%2.0f", id( soil_sensor_va0 ).state);
+          sprintf( str, "%2.0f", id( ${device}_a0 ).state);
           it.circle(badge_center + (badge_width * i), badge_y_offset, badge_radius);
           it.printf(badge_center + (badge_width * i), badge_name_pos, id(font_arial), TextAlign::CENTER, "S%d", i + 1);
-          it.printf(badge_center + (badge_width * i), badge_y_offset, id(font_arial), TextAlign::CENTER, "%s", id(soil_sensor_va0).raw_state < id(sensor_open_value) ? "Off": str);
+          it.printf(badge_center + (badge_width * i), badge_y_offset, id(font_arial), TextAlign::CENTER, "%s", id(${device}_a0).raw_state < id(sensor_open_value) ? "Off": str);
       - id: page2
         lambda: |-
           it.print(0, 0, id(font_times), "Rosies Planter Box");
