@@ -25,7 +25,7 @@ The following features are implemented for every device
 
 | Device | Type | Physical button | [GPIO power] | [UART GPIO] | [Script] | [Custom Sensor] |
 | -- | -- |:--:|:--:|:--:|:--:|:--:|
-| [Sensor Network Test Device]     | [mini D1]             |   |   |   |   |   |
+| [Sensor Network Test Device]     | [NodeMCU]             |   |   |   |   |   |
 
 ### Sensors
 
@@ -81,3 +81,4 @@ For this, you can copy the [Travis Secrets] to `secrets.yaml` and fill in your s
 [dht22]: https://esphome.io/components/sensor/dht.html
 [RF Receiver]: RFReceiver.md
 [ADS1115]: https://esphome.io/components/sensor/ads1115.html
+[NodeMCU]: https://esphome.io/devices/nodemcu_esp8266.html
