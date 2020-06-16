@@ -25,29 +25,13 @@ The following features are implemented for every device
 
 | Device | Type | Physical button | [GPIO power] | [UART GPIO] | [Script] | [Custom Sensor] |
 | -- | -- |:--:|:--:|:--:|:--:|:--:|
-| [attic_1]     | [Sonoff 4CH R2]             | X |   |   |   |   |
-| [bedroom_1]   | [Sonoff 4CH Pro]            | X |   | X |   |   |
-| [bedroom_2]   | [Sonoff S20]                | X |   | X |   |   |
-| [garage]      | [Wemos D1 mini Pro v1.0.0]  |   |   |   |   |   |
-| [living_1]    | [Sonoff 4CH]                | X |   | X |   |   |
-| [smartmeter]  | [Wemos D1 mini Pro v1.0.0]  |   | X |   |   | X |
-| [ventilation] | [Sonoff Pow R2]             | X |   |   | X |   |
-| [veranda_wcd] | [Shelly 1]                  | X |   |   |   |   |
-| [xmas_1]      | [Sonoff Dual R1]            | X |   |   |   | X |
+| [Sensor Network Test Device]     | [mini D1]             |   |   |   |   |   |
 
 ### Sensors
 
-| Device | [Status LED] | [bme280] ([i2c])  | [dallas] | [CSE7766] | [dht22] | [RF receiver] |
-| -- |:--:|:--:|:--:|:--:|:--:|:--:|
-| [attic_1]     | X |   |   |   |   | X |
-| [bedroom_1]   |   | X |   |   |   |   |
-| [bedroom_2]   |   |   |   |   |   | X |
-| [garage]      | X |   | X |   | X |   |
-| [living_1]    | X | X |   |   |   |   |
-| [smartmeter]  | X | X |   |   |   |   |
-| [ventilation] | X |   |   | X |   | X |
-| [veranda_wcd] |   |   |   |   |   |   |
-| [xmas_1]      | X |   |   |   |   |   |
+| Device | [Status LED] | [bme280] ([i2c])  | [dallas] | [CSE7766] | [dht22] | [RF receiver] | [ADS1115] ([i2c]) | 
+| -- |:--:|:--:|:--:|:--:|:--:|:--:|:--:|
+| [Sensor Network Test Device]     | X |   |   | X |   |  | X |
 
 ## Installation
 
@@ -76,14 +60,6 @@ For this, you can copy the [Travis Secrets] to `secrets.yaml` and fill in your s
 [Travis Secrets]: https://github.com/AlexMekkering/esphome-config/blob/master/.travis-secrets.yaml
 [Common Travis Secrets]: https://github.com/AlexMekkering/esphome-config/blob/master/common/.travis-secrets.yaml
 [attic_1]: https://github.com/AlexMekkering/esphome-config/blob/master/attic_1.yaml
-[bedroom_1]: https://github.com/AlexMekkering/esphome-config/blob/master/bedroom_1.yaml
-[bedroom_2]: https://github.com/AlexMekkering/esphome-config/blob/master/bedroom_2.yaml
-[garage]: https://github.com/AlexMekkering/esphome-config/blob/master/garage.yaml
-[living_1]: https://github.com/AlexMekkering/esphome-config/blob/master/living_1.yaml
-[smartmeter]: https://github.com/AlexMekkering/esphome-config/blob/master/smartmeter.yaml
-[ventilation]: https://github.com/AlexMekkering/esphome-config/blob/master/ventilation.yaml
-[veranda_wcd]: https://github.com/AlexMekkering/esphome-config/blob/master/veranda_wcd.yaml
-[xmas_1]: https://github.com/AlexMekkering/esphome-config/blob/master/christmas_1.yaml
 [Sonoff S20]: https://www.itead.cc/smart-socket.html
 [NodeMCU v2]: https://github.com/nodemcu/nodemcu-devkit-v1.0
 [Wemos D1 mini Pro v1.0.0]: https://wiki.wemos.cc/products:retired:d1_mini_pro_v1.0.0
@@ -104,3 +80,4 @@ For this, you can copy the [Travis Secrets] to `secrets.yaml` and fill in your s
 [CSE7766]: https://esphome.io/components/sensor/cse7766.html
 [dht22]: https://esphome.io/components/sensor/dht.html
 [RF Receiver]: RFReceiver.md
+[ADS1115]: https://esphome.io/components/sensor/ads1115.html
