@@ -104,10 +104,10 @@ sensor:
     icon: "mdi:water-percent"
     accuracy_decimals: 1
     filters:
-      - sliding_window_moving_average:
-          window_size:  ${sliding_window}
-          send_every:  ${sliding_window}
-          send_first_at: 1
+      # - sliding_window_moving_average:
+      #     window_size:  ${sliding_window}
+      #     send_every:  ${sliding_window}
+      #     send_first_at: 1
       - lambda: |-
           if (x > id(a0_air) || x < id(sensor_open_value)) {
             return 0.0;
