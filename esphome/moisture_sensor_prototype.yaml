@@ -5,6 +5,10 @@ substitutions:
   reboot_timeout: 1h
   update_interval: 10min
   sliding_window: "15"
+  i2c_sda: D2
+  i2c_scl: D1
+  i2c_scan: 'True'
+  i2c_device: ads115_a
 
 esphome:
   name: ${device}
@@ -20,14 +24,11 @@ esphome:
 #
 # I2C Iniitalisation
 #
+<<: !include common/i2c.yaml
+
 ads1115:
     - address: 0x48
-i2c:
-  sda: D2
-  scl: D1
-  scan: True
-  id: bus_a
-
+    
 globals:
    - id: sensor_open_value
      type: float
