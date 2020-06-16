@@ -1,28 +1,21 @@
+substitutions:
+  device: moisture_sensor_prototype
+  name: Moister Sensor Prototype
+  location: Test
+  reboot_timeout: 1h
+  update_interval: 10min
+  sliding_window: "15"
+
 esphome:
-  name: moisture_sensor_prototype
+  name: ${device}
   platform: ESP8266
   board: d1_mini
 
-wifi:
-  ssid: "NCC-1701-Media"
-  password: "---"
 
-  # Enable fallback hotspot (captive portal) in case wifi connection fails
-  ap:
-    ssid: "---"
-    password: "---"
-
-captive_portal:
-
-# Enable logging
-logger:
-
-# Enable Home Assistant API
-api:
-  password: "--"
-
-ota:
-  password: "---"
+<<: !include common/common.yaml
+<<: !include common/logger.yaml
+<<: !include common/binary_sensors.yaml
+<<: !include common/switches.yaml
 
 #
 # I2C Iniitalisation
@@ -65,53 +58,18 @@ globals:
      type: float
      restore_value: no
      initial_value: '30.0'
-  # The array of soil sensors
-   - id: num_sensors
-     type: int
-     restore_value: no
-     initial_value: '5'
-  #  - id: sensor_array
-  #    type: int[]
-  #    restore_value: no
-  #    initial_value: '{soil_sensor_a0,soil_sensor_va0,soil_sensor_va1,soil_sensor_va2,soil_sensor_va3}'
-
-sun:
-   latitude: 37.932621
-   longitude: -121.703117
 
 #################################################################
 # Various Sensor Config
 #################################################################
-text_sensor:
-  - platform: sun
-    name: Sun Next Sunrise
-    type: sunrise
-  - platform: sun
-    name: Sun Next Sunset
-    type: sunset
-  - platform: homeassistant
-    id: weather
-    name: weather
-    entity_id: weather.home
-    internal: true
-  # - platform: homeassistant
-  #   id: sun
-  #   name: sun
-  #   entity_id: sun.sun
-  #   internal: true
 
 #################################################################
 # Sensor Configuration
 #################################################################
 sensor:
-  - platform: sun
-    name: Sun Elevation
-    type: elevation
-    update_interval: 60s
-  - platform: sun
-    name: Sun Azimuth
-    type: azimuth
-    update_interval: 60s
+  - !include common/sensor/wifi-signal.yaml
+  - !include common/sensor/uptime.yaml
+  # replace with one for dht11 - !include common/sensor/bme280.yaml
 
 #################################################################
 # DHT11 Temperature and Humidity Sensor
@@ -119,26 +77,26 @@ sensor:
   - platform: dht
     pin: D7
     model: DHT11
-    update_interval: 10s
+    update_interval: ${update_interval}
     temperature:
-      name: "Planter Box 1 Temp"
+      name: ${name} Temperature
       filters:
         - sliding_window_moving_average:
-            window_size: 15
-            send_every: 15
-            send_first_at: 15
+            window_size: ${sliding_window}
+            send_every: ${sliding_window}
+            send_first_at: 1
     humidity:
-      name: "Planter Box 1 Humidity"
+      name: ${name} Humidity
       filters:
         - sliding_window_moving_average:
-            window_size: 15
-            send_every: 15
-            send_first_at: 15
+            window_size: ${sliding_window}
+            send_every: ${sliding_window}
+            send_first_at: 1
 #################################################################
 # Soil Sensore on Analog Pin A0
 #################################################################
   - platform: adc
-    name: "Planter Box 1 Soil Moisture Level"
+    name: ${name} A0
     pin: A0
     id: soil_sensor_a0
     update_interval: 5s
@@ -147,9 +105,9 @@ sensor:
     accuracy_decimals: 1
     filters:
       - sliding_window_moving_average:
-          window_size: 15
-          send_every: 15
-          send_first_at: 15
+          window_size:  ${sliding_window}
+          send_every:  ${sliding_window}
+          send_first_at: 1
       - lambda: |-
           if (x > id(a0_air) || x < id(sensor_open_value)) {
             return 0.0;
@@ -161,20 +119,15 @@ sensor:
     on_value:
       then:
         - lambda: |-
-            ESP_LOGD("main", "A0 Connected %s", id(soil_sensor_a0).raw_state > id(sensor_open_value) ? "true" : "false" );
             if ( id(soil_sensor_a0).raw_state < id(sensor_open_value) ){
-              // Sensor not connected
-              ESP_LOGD("main", "Turning off A0 LED" );
               auto call = id(a0_status_led).turn_off();
               call.perform();  
             } else if (x < id(danger_threshold) ) {
-              ESP_LOGD("main", "Soil Moisture Warning on A0" );
               auto call = id(a0_status_led).turn_on();
               call.set_brightness(id(led_max_brightness));
               call.set_effect("Danger Will Robinson");
               call.perform();  
             } else {
-              ESP_LOGD("main", "Show moisture as light level" );
               auto call = id(a0_status_led).turn_on();
               call.set_brightness(id(led_max_brightness));
               call.set_effect("none");
@@ -189,7 +142,7 @@ sensor:
 ################################################################
 # Virtual A0
   - platform: ads1115
-    name: "ADS1115 A0 (Planter Box 1)"
+    name: ADS1115 A0 ${name}
     multiplexer: 'A0_GND'
     id: soil_sensor_va0
     unit_of_measurement: "%"
@@ -199,9 +152,9 @@ sensor:
     update_interval: 5s
     filters:
       # - sliding_window_moving_average:
-      #     window_size: 15
-      #     send_every: 15
-      #     send_first_at: 15
+      #     window_size:  ${sliding_window}
+      #     send_every:  ${sliding_window}
+      #     send_first_at: 1
       - lambda: |-
           if (x < id(a0_gnd_air)) {
             return 0.0;
@@ -213,164 +166,21 @@ sensor:
     on_value:
       then:
         - lambda: |-
-            ESP_LOGD("main", "VA0 Connected %s", id(soil_sensor_va0).raw_state > id(sensor_open_value) ? "true" : "false" );
             if ( id(soil_sensor_va0).raw_state < id(sensor_open_value) ){
-              // Sensor not connected
-              ESP_LOGD("main", "Turning off VA0 LED" );
               auto call = id(va0_status_led).turn_off();
               call.perform();  
             } else if (x < id(danger_threshold) ) {
-              ESP_LOGD("main", "Soil Moisture Warning on VA0" );
               auto call = id(va0_status_led).turn_on();
               call.set_brightness(id(led_max_brightness));
               call.set_effect("Danger Will Robinson");
               call.perform();  
             } else {
-              ESP_LOGD("main", "Show moisture as light level" );
               auto call = id(va0_status_led).turn_on();
               call.set_brightness(id(led_max_brightness));
               call.set_effect("none");
               call.set_rgb((100.0-id(soil_sensor_va0).state)/100.0, id(soil_sensor_va0).state/100.0, 0.0);
               call.perform();  
             }
-# # Virtual A1
-#   - platform: ads1115
-#     name: "ADS1115 A1 (Planter Box 1)"
-#     multiplexer: 'A1_GND'
-#     id: soil_sensor_va1
-#     unit_of_measurement: "%"
-#     icon: "mdi:water-percent"
-#     accuracy_decimals: 1
-#     gain: 0.256
-#     update_interval: 5s
-#     filters:
-#       - sliding_window_moving_average:
-#           window_size: 15
-#           send_every: 15
-#           send_first_at: 15
-#       - lambda: |-
-#           if (x < id(a0_gnd_air)) {
-#             return 0.0;
-#           } else if (x > id(a0_gnd_water)) {
-#             return 100.0;
-#           } else {
-#             return (id(a0_gnd_air) - x) / (id(a0_gnd_air)-id(a0_gnd_water)) * 100.0;
-#           }
-#     on_value:
-#       then:
-#         - lambda: |-
-#             ESP_LOGD("main", "VA1 Connected %s", id(soil_sensor_va1).raw_state > id(sensor_open_value) ? "true" : "false" );
-#             if ( id(soil_sensor_va1).raw_state < id(sensor_open_value) ){
-#               // Sensor not connected
-#               ESP_LOGD("main", "Turning off VA1 LED" );
-#               auto call = id(va1_status_led).turn_off();
-#               call.perform();  
-#             } else if (x < id(danger_threshold) ) {
-#               ESP_LOGD("main", "Soil Moisture Warning on VA1" );
-#               auto call = id(va1_status_led).turn_on();
-#               call.set_brightness(id(led_max_brightness));
-#               call.set_effect("Danger Will Robinson");
-#               call.perform();  
-#             } else {
-#               ESP_LOGD("main", "Show moisture as light level" );
-#               auto call = id(va1_status_led).turn_on();
-#               call.set_brightness(id(led_max_brightness));
-#               call.set_effect("none");
-#               call.set_rgb((100.0-id(soil_sensor_va1).state)/100.0, id(soil_sensor_va1).state/100.0, 0.0);
-#               call.perform();  
-#             }
-# # Virtual A2
-#   - platform: ads1115
-#     name: "ADS1115 A2 (Planter Box 1)"
-#     multiplexer: 'A2_GND'
-#     id: soil_sensor_va2
-#     unit_of_measurement: "%"
-#     icon: "mdi:water-percent"
-#     accuracy_decimals: 1
-#     gain: 0.256
-#     update_interval: 5s
-#     filters:
-#       - sliding_window_moving_average:
-#           window_size: 15
-#           send_every: 15
-#           send_first_at: 15
-#       - lambda: |-
-#           if (x < id(a0_gnd_air)) {
-#             return 0.0;
-#           } else if (x > id(a0_gnd_water)) {
-#             return 100.0;
-#           } else {
-#             return (id(a0_gnd_air) - x) / (id(a0_gnd_air)-id(a0_gnd_water)) * 100.0;
-#           }
-#     on_value:
-#       then:
-#         - lambda: |-
-#             ESP_LOGD("main", "VA2 Connected %s", id(soil_sensor_va2).raw_state > id(sensor_open_value) ? "true" : "false" );
-#             if ( id(soil_sensor_va2).raw_state < id(sensor_open_value) ){
-#               // Sensor not connected
-#               ESP_LOGD("main", "Turning off VA2 LED" );
-#               auto call = id(va2_status_led).turn_off();
-#               call.perform();  
-#             } else if (x < id(danger_threshold) ) {
-#               ESP_LOGD("main", "Soil Moisture Warning on VA2" );
-#               auto call = id(va2_status_led).turn_on();
-#               call.set_brightness(id(led_max_brightness));
-#               call.set_effect("Danger Will Robinson");
-#               call.perform();  
-#             } else {
-#               ESP_LOGD("main", "Show moisture as light level" );
-#               auto call = id(va2_status_led).turn_on();
-#               call.set_brightness(id(led_max_brightness));
-#               call.set_effect("none");
-#               call.set_rgb((100.0-id(soil_sensor_va2).state)/100.0, id(soil_sensor_va2).state/100.0, 0.0);
-#               call.perform();  
-#             }
-# # Virtual A3
-#   - platform: ads1115
-#     name: "ADS1115 A3 (Planter Box 1)"
-#     multiplexer: 'A3_GND'
-#     id: soil_sensor_va3
-#     unit_of_measurement: "%"
-#     icon: "mdi:water-percent"
-#     accuracy_decimals: 1
-#     gain: 0.256
-#     update_interval: 5s
-#     filters:
-#       - sliding_window_moving_average:
-#           window_size: 15
-#           send_every: 15
-#           send_first_at: 15
-#       - lambda: |-
-#           if (x < id(a0_gnd_air)) {
-#             return 0.0;
-#           } else if (x > id(a0_gnd_water)) {
-#             return 100.0;
-#           } else {
-#             return (id(a0_gnd_air) - x) / (id(a0_gnd_air)-id(a0_gnd_water)) * 100.0;
-#           }
-#     on_value:
-#       then:
-#         - lambda: |-
-#             ESP_LOGD("main", "VA3 Connected %s", id(soil_sensor_va3).raw_state > id(sensor_open_value) ? "true" : "false" );
-#             if ( id(soil_sensor_va3).raw_state < id(sensor_open_value) ){
-#               // Sensor not connected
-#               ESP_LOGD("main", "Turning off VA3 LED" );
-#               auto call = id(va3_status_led).turn_off();
-#               call.perform();  
-#             } else if (x < id(danger_threshold) ) {
-#               ESP_LOGD("main", "Soil Moisture Warning on VA3" );
-#               auto call = id(va3_status_led).turn_on();
-#               call.set_brightness(id(led_max_brightness));
-#               call.set_effect("Danger Will Robinson");
-#               call.perform();  
-#             } else {
-#               ESP_LOGD("main", "Show moisture as light level" );
-#               auto call = id(va3_status_led).turn_on();
-#               call.set_brightness(id(led_max_brightness));
-#               call.set_effect("none");
-#               call.set_rgb((100.0-id(soil_sensor_va3).state)/100.0, id(soil_sensor_va3).state/100.0, 0.0);
-#               call.perform();  
-#             }
 
 ### END OF ADS115 BLOCK
 
@@ -387,7 +197,7 @@ light:
     id: led_strip
 # Soil Sensor on ESP A0
   - platform: partition
-    name: "led1"
+    name: "A0 Led"
     id: a0_status_led
     effects:
       - strobe:
@@ -407,7 +217,7 @@ light:
         to: 0
 # Soil Sensor on AD1115 A0-GND
   - platform: partition
-    name: "led2"
+    name: "VA0 Led"
     id: va0_status_led
     effects:
       - strobe:
@@ -427,7 +237,7 @@ light:
         to: 1
 # Soil Sensor on AD1115 A1-GND
   - platform: partition
-    name: "led3"
+    name: "VA1 Led"
     id: va1_status_led
     effects:
       - strobe:
@@ -447,16 +257,27 @@ light:
         to: 2
 # Soil Sensor on AD1115 A2-GND
   - platform: partition
-    name: "led4"
+    name: "VA2 Led"
     id: va2_status_led
-    effects: strobe
+    effects:
+      - strobe:
+          name: Danger Will Robinson
+          colors:
+            - state: True
+              brightness: 100%
+              red: 100%
+              green: 0%
+              blue: 0%
+              duration: 500ms
+            - state: False
+              duration: 500ms
     segments:
       - id: led_strip
         from: 3
         to: 3
 # Soil Sensor on AD1115 A3-GND
   - platform: partition
-    name: "led5"
+    name: "VA3 Led"
     id: va3_status_led
     effects:
       - strobe:
@@ -487,11 +308,9 @@ light:
 #################################################################
 # Misc setup
 #################################################################
-# Get time update from Home Assistant
-time:
-  - platform: homeassistant
-    id: esptime
-    
+switch:
+  - !include common/switch/restart.yaml
+
 #################################################################
 # List of fonts we are using for the OLED Display.
 #################################################################
@@ -539,7 +358,7 @@ display:
           static int badge_name_pos = badge_y_offset - badge_radius - 6;
 
           it.print(0, 0, id(font_times), "Rosies Planter Box");
-          it.print(4, badge_y_offset + badge_radius + 4, id(font_arial), "Soil Moisture Content %");
+          // Display Wifi, temp and humidity here and the a line.
 
           // Display each sensor in it's own little circle
           int i = 0;

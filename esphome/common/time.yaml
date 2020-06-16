@@ -1,0 +1,4 @@
+# Get time update from Home Assistant
+time:
+  - platform: homeassistant
+    id: esptime
