@@ -25,13 +25,13 @@ The following features are implemented for every device
 
 | Device | Type | Physical button | [GPIO power] | [UART GPIO] | [Script] | [Custom Sensor] |
 | -- | -- |:--:|:--:|:--:|:--:|:--:|
-| [Sensor Network Test Device]     | [NodeMCU]             |   |   |   |   |   |
+| [moisture_sensor_prototype]     | [NodeMCU]             |   |   |   |   |   |
 
 ### Sensors
 
 | Device | [Status LED] | [bme280] ([i2c])  | [dallas] | [CSE7766] | [dht22] | [RF receiver] | [ADS1115] ([i2c]) | 
 | -- |:--:|:--:|:--:|:--:|:--:|:--:|:--:|
-| [Sensor Network Test Device]     | X |   |   | X |   |  | X |
+| [moisture_sensor_prototype]     | X |   |   | X |   |  | X |
 
 ## Installation
 
@@ -57,9 +57,8 @@ For this, you can copy the [Travis Secrets] to `secrets.yaml` and fill in your s
 - [Using UART as GPIO](UARTasGPIO.md)
 - [Receiving RF Codes](RFReceiver.md)
 
-[Travis Secrets]: https://github.com/AlexMekkering/esphome-config/blob/master/.travis-secrets.yaml
-[Common Travis Secrets]: https://github.com/AlexMekkering/esphome-config/blob/master/common/.travis-secrets.yaml
-[attic_1]: https://github.com/AlexMekkering/esphome-config/blob/master/attic_1.yaml
+[moisture_sensor_prototype]: https://github.com/jimbydude/esphome/blob/master/esphome/moisture_sensor_prototype.yaml 
+[Travis Secrets]: https://github.com/jimbydude/esphome/blob/master/esphome/.travis-secrets.yaml
 [Sonoff S20]: https://www.itead.cc/smart-socket.html
 [NodeMCU v2]: https://github.com/nodemcu/nodemcu-devkit-v1.0
 [Wemos D1 mini Pro v1.0.0]: https://wiki.wemos.cc/products:retired:d1_mini_pro_v1.0.0
