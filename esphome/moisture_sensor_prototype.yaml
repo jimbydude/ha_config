@@ -1,6 +1,6 @@
 substitutions:
   device: moisture_sensor_prototype
-  name: Moister Sensor Prototype
+  name: Moisture Sensor Prototype
   location: Test
   reboot_timeout: 1h
   update_interval: 10min
