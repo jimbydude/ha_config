@@ -1,0 +1,14 @@
+---
+platform: template
+name: ${name} Uptime Formatted
+lambda: |-
+  int seconds = (id(sensor_uptime).state);
+  int days = seconds / (24 * 3600);
+  seconds = seconds % (24 * 3600); 
+  int hours = seconds / 3600;
+  seconds = seconds % 3600;
+  int minutes = seconds /  60;
+  seconds = seconds % 60;
+  return { (String(days) +"d " + String(hours) +"h " + String(minutes) +"m").c_str() };
+icon: mdi:clock-start
+update_interval: 60s
