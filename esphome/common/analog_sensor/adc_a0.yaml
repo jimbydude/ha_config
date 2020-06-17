@@ -1,6 +1,3 @@
-#################################################################
-# Sensore on Analog Pin A0
-#################################################################
 platform: adc
 name: ${name} A0
 pin: A0
@@ -14,29 +11,4 @@ filters:
   #     window_size:  ${sliding_window}
   #     send_every:  ${sliding_window}
   #     send_first_at: 1
-  - lambda: |-
-      if (x > id(a0_air) || x < id(sensor_open_value)) {
-        return 0.0;
-      } else if (x < id(a0_water)) {
-        return 100.0;
-      } else {
-        return (id(a0_air)-x) / (id(a0_air)-id(a0_water)) * 100.0;
-      }
-on_value:
-  then:
-    - lambda: |-
-        if ( id(${device}_a0).raw_state < id(sensor_open_value) ){
-          auto call = id(a0_status_led).turn_off();
-          call.perform();  
-        } else if (x < id(danger_threshold) ) {
-          auto call = id(a0_status_led).turn_on();
-          call.set_brightness(id(led_max_brightness));
-          call.set_effect("Danger Will Robinson");
-          call.perform();  
-        } else {
-          auto call = id(a0_status_led).turn_on();
-          call.set_brightness(id(led_max_brightness));
-          call.set_effect("none");
-          call.set_rgb((100.0-id(${device}_a0).state)/100.0, id(${device}_a0).state/100.0, 0.0);
-          call.perform();  
-        }
+  

@@ -78,7 +78,7 @@ sensor:
   - !include common/sensor/uptime.yaml
   - !include common/sensor/dht11.yaml
   # Soil Sensore on Analog Pin A0
-  - !include common/analog_sensor/adc_a0.yaml
+  - !include common/adc_a0_moisture.yaml
 
 ### END OF SENSOR CONFIG BLOCK
 
@@ -86,47 +86,7 @@ sensor:
 # ADS1115 Analog multiplexer.
 ################################################################
 # Virtual A0
-  - platform: ads1115
-    name: ADS1115 A0 ${name}
-    multiplexer: 'A0_GND'
-    id: ${device}_va0
-    unit_of_measurement: ${adc_a0_unit_of_measurement}
-    icon: ${adc_va0_icon}
-    accuracy_decimals: ${adc_a0_accuracy_decimals}
-    gain: ${adc_gain}
-    update_interval: ${update_interval_short}
-    filters:
-      # - sliding_window_moving_average:
-      #     window_size:  ${sliding_window}
-      #     send_every:  ${sliding_window}
-      #     send_first_at: 1
-      - lambda: |-
-          if (x < id(a0_gnd_air)) {
-            return 0.0;
-          } else if (x > id(a0_gnd_water)) {
-            return 100.0;
-          } else {
-            return (x - id(a0_gnd_air)) / (id(a0_gnd_water)-id(a0_gnd_air)) * 100.0;
-          }
-    on_value:
-      then:
-        - lambda: |-
-            if ( id(${device}_va0).raw_state < id(sensor_open_value) ){
-              auto call = id(va0_status_led).turn_off();
-              call.perform();  
-            } else if (x < id(danger_threshold) ) {
-              auto call = id(va0_status_led).turn_on();
-              call.set_brightness(id(led_max_brightness));
-              call.set_effect("Danger Will Robinson");
-              call.perform();  
-            } else {
-              auto call = id(va0_status_led).turn_on();
-              call.set_brightness(id(led_max_brightness));
-              call.set_effect("none");
-              call.set_rgb((100.0-id(${device}_va0).state)/100.0, id(${device}_va0).state/100.0, 0.0);
-              call.perform();  
-            }
-
+  - !include common/ads1115_moisture.yaml
 ### END OF ADS115 BLOCK
 
 #################################################################
@@ -308,11 +268,32 @@ display:
           // Display each sensor in it's own little circle
           int i = 0;
           char str[10];
-          // TEST
           sprintf( str, "%2.0f", id( ${device}_a0 ).state);
           it.circle(badge_center + (badge_width * i), badge_y_offset, badge_radius);
           it.printf(badge_center + (badge_width * i), badge_name_pos, id(font_arial), TextAlign::CENTER, "S%d", i + 1);
           it.printf(badge_center + (badge_width * i), badge_y_offset, id(font_arial), TextAlign::CENTER, "%s", id(${device}_a0).raw_state < id(sensor_open_value) ? "Off": str);
+          i++
+          sprintf( str, "%2.0f", id( ${device}_va0 ).state);
+          it.circle(badge_center + (badge_width * i), badge_y_offset, badge_radius);
+          it.printf(badge_center + (badge_width * i), badge_name_pos, id(font_arial), TextAlign::CENTER, "S%d", i + 1);
+          it.printf(badge_center + (badge_width * i), badge_y_offset, id(font_arial), TextAlign::CENTER, "%s", id(${device}_va0).raw_state < id(sensor_open_value) ? "Off": str);
+          i++
+          sprintf( str, "%2.0f", id( ${device}_va1 ).state);
+          it.circle(badge_center + (badge_width * i), badge_y_offset, badge_radius);
+          it.printf(badge_center + (badge_width * i), badge_name_pos, id(font_arial), TextAlign::CENTER, "S%d", i + 1);
+          it.printf(badge_center + (badge_width * i), badge_y_offset, id(font_arial), TextAlign::CENTER, "%s", id(${device}_va1).raw_state < id(sensor_open_value) ? "Off": str);
+          i++
+          sprintf( str, "%2.0f", id( ${device}_va2 ).state);
+          it.circle(badge_center + (badge_width * i), badge_y_offset, badge_radius);
+          it.printf(badge_center + (badge_width * i), badge_name_pos, id(font_arial), TextAlign::CENTER, "S%d", i + 1);
+          it.printf(badge_center + (badge_width * i), badge_y_offset, id(font_arial), TextAlign::CENTER, "%s", id(${device}_va2).raw_state < id(sensor_open_value) ? "Off": str);
+          i++
+          sprintf( str, "%2.0f", id( ${device}_va3 ).state);
+          it.circle(badge_center + (badge_width * i), badge_y_offset, badge_radius);
+          it.printf(badge_center + (badge_width * i), badge_name_pos, id(font_arial), TextAlign::CENTER, "S%d", i + 1);
+          it.printf(badge_center + (badge_width * i), badge_y_offset, id(font_arial), TextAlign::CENTER, "%s", id(${device}_va3).raw_state < id(sensor_open_value) ? "Off": str);
+          i++
+
       - id: page2
         lambda: |-
           it.print(0, 0, id(font_times), "Rosies Planter Box");

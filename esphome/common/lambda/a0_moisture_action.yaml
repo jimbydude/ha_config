@@ -1,0 +1,22 @@
+on_value:
+  then:
+    lambda: |-
+          if (x < id(danger_threshold) ) {
+            auto call = id(a0_status_led).turn_on();
+            call.set_brightness(id(led_max_brightness));
+            call.set_effect("Danger Will Robinson");
+            call.perform();  
+          } else {
+            auto call = id(a0_status_led).turn_on();
+            call.set_brightness(id(led_max_brightness));
+            call.set_effect("none");
+            call.set_rgb((100.0-x)/100.0,x/100.0, 0.0);
+            call.perform();  
+          }
+on_raw_value:
+  then:
+    lambda: |-
+      if ( x < id(sensor_open_value) ){
+        auto call = id(a0_status_led).turn_off();
+        call.perform();  
+      } 

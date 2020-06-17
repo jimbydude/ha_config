@@ -1,0 +1,15 @@
+#################################################################
+# Sensore on Analog Pin A0
+#################################################################
+platform: adc
+name: ${name} A0
+pin: A0
+id: ${device}_a0
+update_interval: ${update_interval_short}
+unit_of_measurement: ${adc_a0_unit_of_measurement}
+icon: ${adc_a0_icon}
+accuracy_decimals: ${adc_a0_accuracy_decimals}
+filters:
+  - !include filter/sliding_window.yaml
+  - !include lambda/a0_moisture_result.yaml
+<<: !include lambda/a0_moisture_action.yaml

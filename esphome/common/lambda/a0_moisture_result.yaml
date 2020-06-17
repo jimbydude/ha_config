@@ -1,0 +1,8 @@
+lambda: |-
+      if (x > id(a0_air) || x < id(sensor_open_value)) {
+        return 0.0;
+      } else if (x < id(a0_water)) {
+        return 100.0;
+      } else {
+        return (id(a0_air)-x) / (id(a0_air)-id(a0_water)) * 100.0;
+      }

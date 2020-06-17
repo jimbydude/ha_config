@@ -1,0 +1,4 @@
+sliding_window_moving_average:
+      window_size:  ${sliding_window}
+      send_every:  ${sliding_window}
+      send_first_at: 1
