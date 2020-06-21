@@ -1,0 +1,12 @@
+---
+strobe:
+  name: Wifi Connecting
+  colors:
+    - state: True
+      brightness: 30%
+      red: 0%
+      green: 0%
+      blue: 100%
+      duration: 500ms
+    - state: False
+      duration: 500ms

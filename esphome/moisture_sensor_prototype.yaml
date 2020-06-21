@@ -206,7 +206,9 @@ light:
 # Status LED
   - platform: partition
     name: "led6"
-    id: section6
+    id: status_led
+    effects:
+      - !include common/effect/strobe_wifi_connecting.yaml
     segments:
       - id: led_strip
         from: 5
@@ -261,14 +263,24 @@ display:
           static int badge_width = badge_center*2;
           static int badge_padding = 2;
           static int badge_radius = badge_center - badge_padding;
-          static int badge_y_offset = 40;
+          static int badge_y_offset = 53;
           static int badge_x_offset = 4;
           static int badge_name_pos = badge_y_offset - badge_radius - 6;
+          static int info_line_y = 22;
+          static int wifi_x = 1;
+          static int temp_x = wifi_x + 60;
+          static int hum_x = temp_x + 30;
 
           it.print(0, 0, id(font_times), "Rosies Planter Box");
           // Display Wifi, temp and humidity here and the a line.
+          it.printf(wifi_x, info_line_y, id(font_arial), "Wifi: %2.0fdb", id(${device}_wifi_signal).state);
+          it.printf(temp_x, info_line_y, id(font_arial), "T: %2.0ff", id(${device}_dht11_temp).state);
+          it.printf(hum_x, info_line_y, id(font_arial), "H:%2.0f%%", id(${device}_dht11_hum).state);
 
           // Display each sensor in it's own little circle
+          // Separate with a nice line
+          it.line(0, info_line_y + 10, disp_width, info_line_y +10);
+
           int i = 0;
           char str[10];
           sprintf( str, "%2.0f", id( ${device}_a0 ).state);

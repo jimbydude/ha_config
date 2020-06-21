@@ -8,6 +8,7 @@ model: DHT11
 update_interval: ${update_interval}
 temperature:
   name: ${name} Temperature
+  id: ${device}_dht11_temp  
   filters:
     - sliding_window_moving_average:
         window_size: ${sliding_window}
@@ -15,6 +16,7 @@ temperature:
         send_first_at: 1
 humidity:
   name: ${name} Humidity
+  id: ${device}_dht11_hum  
   filters:
     - sliding_window_moving_average:
         window_size: ${sliding_window}
