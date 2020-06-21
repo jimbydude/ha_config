@@ -1,12 +1,12 @@
 #################################################################
-# Sensor lambda result on Analog Pin A
+# ADS1115 Sensor lambda result on Analog Pin A
 #################################################################
 ---
 lambda: |-
-        ESP_LOGD("main", "A0 val: %f", x );
-        float adj_soil_range = id(adc_soil_dry) - id(adc_soil_saturated);
+        ESP_LOGD("main", "ADS1115 val: %f", x );
+        float adj_soil_range = id(ads1115_soil_dry) - id(ads1115_soil_saturated);
         float perc_adj = 100/adj_soil_range;
-        float adj_val = x - id(adc_soil_saturated);
+        float adj_val = x - id(ads1115_soil_saturated);
         float result = (adj_soil_range - adj_val) * perc_adj;
         ESP_LOGD("main", "A0   adj_soil_range: %f  perc_adj: %f  adj_val: %f  ->Result: %f", adj_soil_range, perc_adj, adj_val, result );
 

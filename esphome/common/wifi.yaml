@@ -6,4 +6,10 @@ wifi:
   ap:
     ssid: ${device}
     password: !secret ap_wifi_password
+  # on_value:
+  # if:
+  #   condition:
+  #     wifi.connected:
+  #   then:
+  #     - logger.log yah!!!!!
 captive_portal:

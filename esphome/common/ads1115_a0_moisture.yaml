@@ -1,0 +1,51 @@
+################################################################
+# ADS1115 Analog multiplexer.
+################################################################
+---
+# Virtual A0
+platform: ads1115
+name: ADS1115 A0 ${name}
+multiplexer: 'A0_GND'
+id: ${device}_va0
+unit_of_measurement: ${adc_unit_of_measurement}
+icon: ${adc_icon}
+accuracy_decimals: ${adc_accuracy_decimals}
+gain: ${adc_gain}
+update_interval: ${update_interval_short}
+filters:
+  # - !include filter/sliding_window.yaml
+  - !include lambda/ads1115_moisture_result.yaml
+on_value:
+  then:
+    - lambda: |-
+        ESP_LOGD("main", "VA0 val (x): %f", x );
+        
+        // Only check for values if the sensor is showing as connected
+        if ( id(adc_va0_connected) )
+          {
+            if (x < id(danger_threshold) ) {
+              auto call = id(va0_status_led).turn_on();
+              call.set_brightness(id(led_max_brightness));
+              call.set_effect("Danger Will Robinson");
+              call.perform();  
+            } else {
+              auto call = id(va0_status_led).turn_on();
+              call.set_brightness(id(led_max_brightness));
+              call.set_effect("none");
+              call.set_rgb( (100.0-x)/100.0, x/100.0, 0.0 );
+              call.perform();  
+            }
+        }
+on_raw_value:
+  then:
+    lambda: |-
+      // If the sensor has been disconnected then turn off the led and set flag.
+      if ( x < id(ads1115_nc_value) ){
+        id(adc_va0_connected) = false;
+        auto call = id(va0_status_led).turn_off();
+        call.perform();  
+      } else {
+        id(adc_va0_connected) = true;
+      }
+
+### END OF ADS115 BLOCK

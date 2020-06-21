@@ -1,22 +1,33 @@
+#################################################################
+# Sensor on Analog Pin A0 - Actions
+#################################################################
+---
 on_value:
   then:
     lambda: |-
-          if (x < id(danger_threshold) ) {
-            auto call = id(a0_status_led).turn_on();
-            call.set_brightness(id(led_max_brightness));
-            call.set_effect("Danger Will Robinson");
-            call.perform();  
-          } else {
-            auto call = id(a0_status_led).turn_on();
-            call.set_brightness(id(led_max_brightness));
-            call.set_effect("none");
-            call.set_rgb((100.0-x)/100.0,x/100.0, 0.0);
-            call.perform();  
+          ESP_LOGD("main", "VA0 val (x): %f", x );
+          if ( id(adc_a0_connected) )
+          {
+            if (x < id(danger_threshold) ) {
+              auto call = id(a0_status_led).turn_on();
+              call.set_brightness(id(led_max_brightness));
+              call.set_effect("Danger Will Robinson");
+              call.perform();  
+            } else {
+              auto call = id(a0_status_led).turn_on();
+              call.set_brightness(id(led_max_brightness));
+              call.set_effect("none");
+              call.set_rgb( (100.0-x)/100.0, x/100.0, 0.0 );
+              call.perform();  
+            }
           }
 on_raw_value:
   then:
     lambda: |-
-      if ( x < id(sensor_open_value) ){
+      if ( x < id(adc_nc_value) ){
+        id(adc_a0_connected) = false;
         auto call = id(a0_status_led).turn_off();
         call.perform();  
-      } 
+      } else {
+        id(adc_a0_connected) = true;
+      }

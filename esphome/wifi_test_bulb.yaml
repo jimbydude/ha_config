@@ -1,0 +1,25 @@
+esphome:
+  name: wifi_test_bulb
+  platform: ESP8266
+  board: esp01_1m
+
+wifi:
+  ssid: "NCC-1701-Media"
+  password: "asdasdasdad"
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Wifi Test Bulb Fallback Hotspot"
+    password: "PiA3rs03k0U1"
+
+captive_portal:
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  password: "asdasdasdad"
+
+ota:
+  password: "asdasdasdad"

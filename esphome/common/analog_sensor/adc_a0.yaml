@@ -1,3 +1,4 @@
+---
 platform: adc
 name: ${name} A0
 pin: A0
