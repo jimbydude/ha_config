@@ -81,13 +81,13 @@ globals:
    - id: ads1115_soil_saturated
      type: float
      restore_value: no
-     initial_value: '0.84'
+     initial_value: '1.0'
 
    # Max voltage (including multiplier). The highter the drier
    - id: ads1115_soil_dry
      type: float
      restore_value: no
-     initial_value: '2.1'
+     initial_value: '2.04'
 
    # ADC Connected
    - id: adc_va0_connected
@@ -138,7 +138,7 @@ sensor:
   - !include common/ads1115_a0_moisture.yaml
   - !include common/ads1115_a1_moisture.yaml
   - !include common/ads1115_a2_moisture.yaml
-  - !include common/ads1115_a3_moisture.yaml
+  # - !include common/ads1115_a3_moisture.yaml
 
 ### END OF ADS115 BLOCK
 
@@ -291,10 +291,6 @@ display:
           it.printf(badge_center + (badge_width * i), badge_name_pos, id(font_arial), TextAlign::CENTER, "S%d", i + 1);
           it.printf(badge_center + (badge_width * i), badge_y_offset, id(font_arial), TextAlign::CENTER, "%s", id(adc_va2_connected) == false ? "Off": str);
           i++;
-          sprintf( str, "%2.0f", id( ${device}_va3 ).state);
-          it.circle(badge_center + (badge_width * i), badge_y_offset, badge_radius);
-          it.printf(badge_center + (badge_width * i), badge_name_pos, id(font_arial), TextAlign::CENTER, "S%d", i + 1);
-          it.printf(badge_center + (badge_width * i), badge_y_offset, id(font_arial), TextAlign::CENTER, "%s", id(adc_va3_connected) == false ? "Off": str);
       - id: page2
         lambda: |-
           it.print(0, 0, id(font_times), "Rosies Planter Box");
