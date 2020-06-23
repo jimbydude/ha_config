@@ -24,10 +24,12 @@ esphome:
   board: d1_mini
 
 
-<<: !include common/common.yaml
+<<: !include common/wifi.yaml
+<<: !include common/api.yaml
+<<: !include common/ota.yaml
+<<: !include common/text_sensors.yaml
 <<: !include common/logger.yaml
 <<: !include common/binary_sensors.yaml
-<<: !include common/switches.yaml
 
 #
 # I2C Iniitalisation
@@ -209,6 +211,7 @@ light:
     id: status_led
     effects:
       - !include common/effect/strobe_wifi_connecting.yaml
+      - !include common/effect/strobe_danger.yaml
     segments:
       - id: led_strip
         from: 5
@@ -228,12 +231,9 @@ font:
   - file: 'ttf/arial.ttf'
     id: font_arial
     size: 10
-  - file: 'ttf/times.ttf'
-    id: font_times
-    size: 16
-  - file: 'ttf/MiriamMonoCLM-Bold.ttf'
-    id: font_miriam
-    size: 24
+  # - file: 'ttf/times.ttf'
+  #   id: font_times
+  #   size: 16
     
 #################################################################
 # OLED Display Configuration
@@ -245,6 +245,13 @@ font:
 #       - display.page.show_next: oled_display
 #       - component.update: oled_display
 
+#################################################################
+# Check Wifi Connection
+#################################################################
+interval:
+    - !include common/lambda/wifi_connection_status.yaml
+    
+
 # Setup Display to show sensor reading in real time.
 display:
   - platform: ssd1306_i2c
@@ -253,63 +260,45 @@ display:
     address: 0x3C
     id: oled_display
     
-    pages:
-      - id: page1
-        lambda: |-
-          static int num_sensors = 5;
-          static int disp_width = it.get_width();
-          static int disp_height = it.get_height();
-          static int badge_center = disp_width/(num_sensors*2);
-          static int badge_width = badge_center*2;
-          static int badge_padding = 2;
-          static int badge_radius = badge_center - badge_padding;
-          static int badge_y_offset = 53;
-          static int badge_x_offset = 4;
-          static int badge_name_pos = badge_y_offset - badge_radius - 6;
-          static int info_line_y = 22;
-          static int wifi_x = 1;
-          static int temp_x = wifi_x + 60;
-          static int hum_x = temp_x + 30;
+    lambda: |-
+      static int num_sensors = 5;
+      static int disp_width = it.get_width();
+      static int disp_height = it.get_height();
+      static int badge_center = disp_width/(num_sensors*2);
+      static int badge_width = badge_center*2;
+      static int badge_padding = 2;
+      static int badge_radius = badge_center - badge_padding;
+      static int badge_y_offset = 53;
+      static int badge_x_offset = 4;
+      static int badge_name_pos = badge_y_offset - badge_radius - 6;
+      static int info_line_y = 22;
+      static int wifi_x = 1;
+      static int temp_x = wifi_x + 60;
+      static int hum_x = temp_x + 30;
 
-          it.print(0, 0, id(font_times), "Rosies Planter Box");
-          // Display Wifi, temp and humidity here and the a line.
-          it.printf(wifi_x, info_line_y, id(font_arial), "Wifi: %2.0fdb", id(${device}_wifi_signal).state);
-          it.printf(temp_x, info_line_y, id(font_arial), "T: %2.0ff", id(${device}_dht11_temp).state);
-          it.printf(hum_x, info_line_y, id(font_arial), "H:%2.0f%%", id(${device}_dht11_hum).state);
+      it.print(0, 0, id(font_arial), "Rosies Planter Box");
+      // Display Wifi, temp and humidity here and the a line.
+      it.printf(wifi_x, info_line_y, id(font_arial), "Wifi: %2.0fdb", id(${device}_wifi_signal).state);
+      it.printf(temp_x, info_line_y, id(font_arial), "T: %2.0ff", id(${device}_dht11_temp).state);
+      it.printf(hum_x, info_line_y, id(font_arial), "H:%2.0f%%", id(${device}_dht11_hum).state);
 
-          // Display each sensor in it's own little circle
-          // Separate with a nice line
-          it.line(0, info_line_y + 10, disp_width, info_line_y +10);
+      // Display each sensor in it's own little circle
+      // Separate with a nice line
+      it.line(0, info_line_y + 10, disp_width, info_line_y +10);
 
-          int i = 0;
-          char str[10];
-          sprintf( str, "%2.0f", id( ${device}_a0 ).state);
-          it.circle(badge_center + (badge_width * i), badge_y_offset, badge_radius);
-          it.printf(badge_center + (badge_width * i), badge_name_pos, id(font_arial), TextAlign::CENTER, "S%d", i + 1);
-          it.printf(badge_center + (badge_width * i), badge_y_offset, id(font_arial), TextAlign::CENTER, "%s", id(adc_a0_connected) == false ? "Off": str);
-          i++;
-          sprintf( str, "%2.0f", id( ${device}_va0 ).state);
-          it.circle(badge_center + (badge_width * i), badge_y_offset, badge_radius);
-          it.printf(badge_center + (badge_width * i), badge_name_pos, id(font_arial), TextAlign::CENTER, "S%d", i + 1);
-          it.printf(badge_center + (badge_width * i), badge_y_offset, id(font_arial), TextAlign::CENTER, "%s", id(adc_va0_connected) == false ? "Off": str);
-          i++;
-          sprintf( str, "%2.0f", id( ${device}_va1 ).state);
-          it.circle(badge_center + (badge_width * i), badge_y_offset, badge_radius);
-          it.printf(badge_center + (badge_width * i), badge_name_pos, id(font_arial), TextAlign::CENTER, "S%d", i + 1);
-          it.printf(badge_center + (badge_width * i), badge_y_offset, id(font_arial), TextAlign::CENTER, "%s", id(adc_va1_connected) == false ? "Off": str);
-          i++;
-          sprintf( str, "%2.0f", id( ${device}_va2 ).state);
-          it.circle(badge_center + (badge_width * i), badge_y_offset, badge_radius);
-          it.printf(badge_center + (badge_width * i), badge_name_pos, id(font_arial), TextAlign::CENTER, "S%d", i + 1);
-          it.printf(badge_center + (badge_width * i), badge_y_offset, id(font_arial), TextAlign::CENTER, "%s", id(adc_va2_connected) == false ? "Off": str);
-          i++;
-      - id: page2
-        lambda: |-
-          it.print(0, 0, id(font_times), "Rosies Planter Box");
-          
-          // Print time in HH:MM format
-          it.strftime(0, 16, id(font_miriam), TextAlign::TOP_LEFT, "%l:%M  %P", id(esptime).now());
-#      - id: page3
-#        lambda: |-
-#          it.printf(0, 10, id(font_arial), "Sun: %s", id(sun).state.c_str());
-#          // it.printf(0, 16, id(font_arial), "Elev: %s", id(sun).sunset());
+      int i = 0;
+      char str[10];
+      sprintf( str, "%2.0f", id( ${device}_a0 ).state);
+      it.circle(badge_center + (badge_width * i), badge_y_offset, badge_radius);
+      it.printf(badge_center + (badge_width * i), badge_name_pos, id(font_arial), TextAlign::CENTER, "S%d", i + 1);
+      it.printf(badge_center + (badge_width * i), badge_y_offset, id(font_arial), TextAlign::CENTER, "%s", id(adc_a0_connected) == false ? "Off": str);
+      i++;
+      sprintf( str, "%2.0f", id( ${device}_va0 ).state);
+      it.circle(badge_center + (badge_width * i), badge_y_offset, badge_radius);
+      it.printf(badge_center + (badge_width * i), badge_name_pos, id(font_arial), TextAlign::CENTER, "S%d", i + 1);
+      it.printf(badge_center + (badge_width * i), badge_y_offset, id(font_arial), TextAlign::CENTER, "%s", id(adc_va0_connected) == false ? "Off": str);
+      i++;
+      sprintf( str, "%2.0f", id( ${device}_va1 ).state);
+      it.circle(badge_center + (badge_width * i), badge_y_offset, badge_radius);
+      it.printf(badge_center + (badge_width * i), badge_name_pos, id(font_arial), TextAlign::CENTER, "S%d", i + 1);
+      it.printf(badge_center + (badge_width * i), badge_y_offset, id(font_arial), TextAlign::CENTER, "%s", id(adc_va1_connected) == false ? "Off": str);

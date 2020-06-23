@@ -5,4 +5,4 @@ ip_address:
 ssid:
   name: ${name} SSID
 bssid:
-  name: ${name} BSSID
+  name: ${name} BSSID  

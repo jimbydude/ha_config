@@ -1,26 +1,5 @@
 ---
 platform: wifi_signal
 name: ${name} WiFi Signal
-update_interval: ${update_interval}
+update_interval: 10s
 id: ${device}_wifi_signal
-on_value:
-  - if:
-      condition:
-        wifi.connected:
-      then:
-        - light.turn_on:
-            id: status_led
-            effect: none
-            red: 0%
-            green: 60%
-            blue: !lambda |-
-              return std::abs(x) / 100.0;
-      else:
-        - light.turn_on:
-            id: status_led
-            effect: Wifi Connecting
-
-
-
-
-
