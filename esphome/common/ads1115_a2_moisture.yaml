@@ -11,9 +11,9 @@ unit_of_measurement: ${adc_unit_of_measurement}
 icon: ${adc_icon}
 accuracy_decimals: ${adc_accuracy_decimals}
 gain: ${adc_gain}
-update_interval: ${update_interval_short}
+update_interval: ${update_interval}
 filters:
-  # - !include filter/sliding_window.yaml
+  - !include filter/sliding_window.yaml
   - !include lambda/ads1115_moisture_result.yaml
 on_value:
   then:

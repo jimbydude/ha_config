@@ -139,7 +139,7 @@ sensor:
 # Virtual A0
   - !include common/ads1115_a0_moisture.yaml
   - !include common/ads1115_a1_moisture.yaml
-  - !include common/ads1115_a2_moisture.yaml
+  # - !include common/ads1115_a2_moisture.yaml
   # - !include common/ads1115_a3_moisture.yaml
 
 ### END OF ADS115 BLOCK
@@ -273,18 +273,21 @@ display:
       static int badge_name_pos = badge_y_offset - badge_radius - 6;
       static int info_line_y = 22;
       static int wifi_x = 1;
-      static int temp_x = wifi_x + 60;
-      static int hum_x = temp_x + 30;
+      static int temp_x = wifi_x + 55;
+      static int hum_x = temp_x + 36;
 
       it.print(0, 0, id(font_arial), "Rosies Planter Box");
+      // Separate with a nice line
+      it.line(0, info_line_y - 9, disp_width, info_line_y -9);
+
       // Display Wifi, temp and humidity here and the a line.
       it.printf(wifi_x, info_line_y, id(font_arial), "Wifi: %2.0fdb", id(${device}_wifi_signal).state);
-      it.printf(temp_x, info_line_y, id(font_arial), "T: %2.0ff", id(${device}_dht11_temp).state);
+      it.printf(temp_x, info_line_y, id(font_arial), "T: %2.0f°F", id(${device}_dht11_temp).state);
       it.printf(hum_x, info_line_y, id(font_arial), "H:%2.0f%%", id(${device}_dht11_hum).state);
 
       // Display each sensor in it's own little circle
       // Separate with a nice line
-      it.line(0, info_line_y + 10, disp_width, info_line_y +10);
+      it.line(0, info_line_y + 9, disp_width, info_line_y +10);
 
       int i = 0;
       char str[10];
