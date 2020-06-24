@@ -278,7 +278,7 @@ display:
 
       it.print(0, 0, id(font_arial), "Rosies Planter Box");
       // Separate with a nice line
-      it.line(0, info_line_y - 9, disp_width, info_line_y -9);
+      it.line(0, info_line_y - 8, disp_width, info_line_y -8);
 
       // Display Wifi, temp and humidity here and the a line.
       it.printf(wifi_x, info_line_y, id(font_arial), "Wifi: %2.0fdb", id(${device}_wifi_signal).state);
