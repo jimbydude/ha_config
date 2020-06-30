@@ -1,0 +1,23 @@
+#################################################################
+# Flash the status LED until we get a good connection
+#################################################################
+---
+interval: ${update_interval_wifi_status}
+then:
+  if:
+    condition:
+      wifi.connected:
+    then:
+      - light.turn_on:
+          effect: none
+          id: status_led
+          red: !lambda |- 
+              return (100-std::abs( id(${device}_wifi_signal).state ))/100.0;
+          green: 0%
+          blue: !lambda |-
+              return std::abs( id(${device}_wifi_signal).state )/100.0;
+    else:
+      # - logger.log: "Lost Wifi Connection. Strobe the status led"
+      - light.turn_on:
+          id: status_led
+          effect: Wifi Connecting

@@ -3,7 +3,9 @@ substitutions:
   name: Moisture Sensor Prototype
   location: Test
   reboot_timeout: 1h
-  update_interval: 10min
+  update_interval: 10s
+  update_interval_memory_usage: 5s
+  update_interval_wifi_status: 10s
   update_interval_short: 10s
   sliding_window: "15"
   i2c_sda: D2
@@ -22,6 +24,12 @@ esphome:
   name: ${device}
   platform: ESP8266
   board: d1_mini
+  on_boot:
+    priority: -10
+    # ...
+    then:
+      - lambda: |-
+          Serial.println(ESP.getFreeHeap(),DEC); 
 
 
 <<: !include common/wifi.yaml
@@ -52,7 +60,7 @@ globals:
      restore_value: no
      initial_value: '0.05'
 
-   # This is the adc off. It's the value in satuated soil 
+   # It's the value in satuated soil 
    - id: adc_soil_saturated
      type: float
      restore_value: no
@@ -64,12 +72,6 @@ globals:
      restore_value: no
      initial_value: '2.3'
 
-   # ADC Connected
-   - id: adc_a0_connected
-     type: bool
-     restore_value: no
-     initial_value: 'false'
-
 #########################
 # ADC ADS1115: Moisture Sensor Globals
 #########################
@@ -79,7 +81,7 @@ globals:
      restore_value: no
      initial_value: '0.5'
 
-   # This is the adc off. It's the value in satuated soil 
+   # It's the value in satuated soil 
    - id: ads1115_soil_saturated
      type: float
      restore_value: no
@@ -91,29 +93,11 @@ globals:
      restore_value: no
      initial_value: '2.04'
 
-   # ADC Connected
-   - id: adc_va0_connected
-     type: bool
-     restore_value: no
-     initial_value: 'false'
-   - id: adc_va1_connected
-     type: bool
-     restore_value: no
-     initial_value: 'false'
-   - id: adc_va2_connected
-     type: bool
-     restore_value: no
-     initial_value: 'false'
-   - id: adc_va3_connected
-     type: bool
-     restore_value: no
-     initial_value: 'false'
-     
 # Lowest Percentage, below this and soil is too dry
    - id: danger_threshold
-     type: float
+     type: int
      restore_value: no
-     initial_value: '30.0'
+     initial_value: '30'
 # END GLOBALS
 
 #################################################################
@@ -157,7 +141,7 @@ light:
     id: led_strip
 # Soil Sensor on ESP A0
   - platform: partition
-    name: "A0 Led"
+    name: "A0 LED"
     id: a0_status_led
     effects:
       - !include common/effect/strobe_danger.yaml
@@ -222,7 +206,7 @@ light:
 # Misc setup
 #################################################################
 switch:
-  - !include common/switch/restart.yaml
+  # - !include common/switch/restart.yaml
 
 #################################################################
 # List of fonts we are using for the OLED Display.
@@ -249,8 +233,9 @@ font:
 # Check Wifi Connection
 #################################################################
 interval:
-    - !include common/lambda/wifi_connection_status.yaml
-    
+    - !include common/wifi_connection_status.yaml
+    - !include common/memory_usage.yaml 
+
 
 # Setup Display to show sensor reading in real time.
 display:
@@ -261,47 +246,29 @@ display:
     id: oled_display
     
     lambda: |-
-      static int num_sensors = 5;
-      static int disp_width = it.get_width();
-      static int disp_height = it.get_height();
-      static int badge_center = disp_width/(num_sensors*2);
-      static int badge_width = badge_center*2;
-      static int badge_padding = 2;
-      static int badge_radius = badge_center - badge_padding;
-      static int badge_y_offset = 53;
-      static int badge_x_offset = 4;
-      static int badge_name_pos = badge_y_offset - badge_radius - 6;
-      static int info_line_y = 22;
-      static int wifi_x = 1;
-      static int temp_x = wifi_x + 55;
-      static int hum_x = temp_x + 36;
+      // static int disp_height = it.get_height();
+      int badge_center = it.get_width()/(5 * 2); 
+      int badge_width = badge_center*2;
+      int badge_radius = badge_center - 2;
+      int badge_y_offset = 53;
+      int badge_name_pos = badge_y_offset - badge_radius - 6;
+      int info_line_y = 22;
 
       it.print(0, 0, id(font_arial), "Rosies Planter Box");
       // Separate with a nice line
-      it.line(0, info_line_y - 8, disp_width, info_line_y -8);
+      it.line(0, info_line_y - 8, it.get_width(), info_line_y -8);
 
       // Display Wifi, temp and humidity here and the a line.
-      it.printf(wifi_x, info_line_y, id(font_arial), "Wifi: %2.0fdb", id(${device}_wifi_signal).state);
-      it.printf(temp_x, info_line_y, id(font_arial), "T: %2.0f°F", id(${device}_dht11_temp).state);
-      it.printf(hum_x, info_line_y, id(font_arial), "H:%2.0f%%", id(${device}_dht11_hum).state);
+      it.printf(1, info_line_y, id(font_arial), "Wifi: %2.0fdb", id(${device}_wifi_signal).state);
+      it.printf(56, info_line_y, id(font_arial), "T: %2.0f°F", id(${device}_dht11_temp).state);
+      it.printf(91, info_line_y, id(font_arial), "H:%2.0f%%", id(${device}_dht11_hum).state);
+      it.line(0, info_line_y + 8, it.get_width(), info_line_y + 8);
 
-      // Display each sensor in it's own little circle
-      // Separate with a nice line
-      it.line(0, info_line_y + 9, disp_width, info_line_y +10);
-
-      int i = 0;
-      char str[10];
-      sprintf( str, "%2.0f", id( ${device}_a0 ).state);
-      it.circle(badge_center + (badge_width * i), badge_y_offset, badge_radius);
-      it.printf(badge_center + (badge_width * i), badge_name_pos, id(font_arial), TextAlign::CENTER, "S%d", i + 1);
-      it.printf(badge_center + (badge_width * i), badge_y_offset, id(font_arial), TextAlign::CENTER, "%s", id(adc_a0_connected) == false ? "Off": str);
-      i++;
-      sprintf( str, "%2.0f", id( ${device}_va0 ).state);
-      it.circle(badge_center + (badge_width * i), badge_y_offset, badge_radius);
-      it.printf(badge_center + (badge_width * i), badge_name_pos, id(font_arial), TextAlign::CENTER, "S%d", i + 1);
-      it.printf(badge_center + (badge_width * i), badge_y_offset, id(font_arial), TextAlign::CENTER, "%s", id(adc_va0_connected) == false ? "Off": str);
-      i++;
-      sprintf( str, "%2.0f", id( ${device}_va1 ).state);
-      it.circle(badge_center + (badge_width * i), badge_y_offset, badge_radius);
-      it.printf(badge_center + (badge_width * i), badge_name_pos, id(font_arial), TextAlign::CENTER, "S%d", i + 1);
-      it.printf(badge_center + (badge_width * i), badge_y_offset, id(font_arial), TextAlign::CENTER, "%s", id(adc_va1_connected) == false ? "Off": str);
+      // Use array of ids to draw all
+      std::vector<float> array = {id( ${device}_a0).state, id( ${device}_va0).state, id( ${device}_va1).state};
+      for (int i=0; i<array.size(); ++i)
+      {
+        it.circle(badge_center + (badge_width * i), badge_y_offset, badge_radius);
+        it.printf(badge_center + (badge_width * i), badge_name_pos, id(font_arial), TextAlign::CENTER, "S%d", i + 1);
+        it.printf(badge_center + (badge_width * i), badge_y_offset, id(font_arial), TextAlign::CENTER, "%2.0f", array[i]);
+      }

@@ -13,38 +13,27 @@ accuracy_decimals: ${adc_accuracy_decimals}
 gain: ${adc_gain}
 update_interval: ${update_interval}
 filters:
-  - !include filter/sliding_window.yaml
+  - filter_out: nan
+  # - !include filter/sliding_window.yaml
   - !include lambda/ads1115_moisture_result.yaml
 on_value:
   then:
     - lambda: |-
-        ESP_LOGD("main", "VA3 val (x): %f", x );
-
-        // Only check for values if the sensor is showing as connected
-        if ( id(adc_va3_connected) )
+        // ESP_LOGD("main", "VA3 val (x): %f", x );
+        if ( id(${device}_va3).raw_state < id(adc_nc_value)  )
         {
-          if (x < id(danger_threshold) ) {
-            auto call = id(va3_status_led).turn_on();
-            call.set_brightness(id(led_max_brightness));
-            call.set_effect("Danger Will Robinson");
-            call.perform();  
-          } else {
-            auto call = id(va3_status_led).turn_on();
-            call.set_brightness(id(led_max_brightness));
-            call.set_effect("none");
-            call.set_rgb( (100.0-x)/100.0, x/100.0, 0.0 );
-            call.perform();  
-          }
+          auto call = id(va3_status_led).turn_off();
+          call.perform();  
+        } else if (x < id(danger_threshold) ) {
+          auto call = id(va3_status_led).turn_on();
+          call.set_brightness(id(led_max_brightness));
+          call.set_effect("Danger Will Robinson");
+          call.perform();  
+        } else {
+          auto call = id(va3_status_led).turn_on();
+          call.set_brightness(id(led_max_brightness));
+          call.set_effect("none");
+          call.set_rgb( (100.0-x)/100.0, x/100.0, 0.0 );
+          call.perform();  
         }
-on_raw_value:
-  then:
-    lambda: |-
-      // If the sensor has been disconnected then turn off the led and set flag.
-      if ( x < id(ads1115_nc_value) ){
-        id(adc_va3_connected) = false;
-        auto call = id(va3_status_led).turn_off();
-        call.perform();  
-      } else {
-        id(adc_va3_connected) = true;
-      }
 ### END OF ADS115 BLOCK

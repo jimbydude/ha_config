@@ -1,0 +1,17 @@
+#################################################################
+# Flash the status LED until we get a good connection
+#################################################################
+---
+interval: ${update_interval_memory_usage}
+then:
+  - lambda: |-
+      Serial.print("getFreeHeapP:");
+      Serial.println(ESP.getFreeHeap(),DEC); 
+      Serial.print("getHeapFragmentation:");
+      Serial.println(ESP.getHeapFragmentation(),DEC); 
+      Serial.print("getMaxFreeBlockSize:");
+      Serial.println(ESP.getMaxFreeBlockSize(),DEC); 
+      Serial.print("getSketchSize:");
+      Serial.println(ESP.getSketchSize(),DEC); 
+      Serial.print("getFreeSketchSpace:");
+      Serial.println(ESP.getFreeSketchSpace(),DEC); 
