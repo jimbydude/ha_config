@@ -12,7 +12,7 @@ icon: ${adc_icon}
 accuracy_decimals: ${adc_accuracy_decimals}
 filters:
   - filter_out: nan
-  - multiply: 3.3
+  # - multiply: 3.3
   # - !include filter/sliding_window.yaml
   - !include lambda/a0_moisture_result.yaml
 <<: !include lambda/a0_moisture_action.yaml

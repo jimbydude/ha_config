@@ -1,12 +1,17 @@
 #################################################################
 # Sensor on Analog Pin A0 - Actions
+#  # Voltage at which the sensor is reading not connected
+#  - id: adc_nc_value
+#    type: float
+#    restore_value: no
+#    initial_value: '0.05'
 #################################################################
 ---
 on_value:
   then:
     lambda: |-
           ESP_LOGD("main", "A0 val (x): %f", x );
-          if ( id(${device}_a0).raw_state < id(adc_nc_value)  )
+          if ( id(${device}_a0).raw_state < 0.05  )
           {
             auto call = id(a0_status_led).turn_off();
             call.perform();

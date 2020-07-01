@@ -1,13 +1,21 @@
 #################################################################
-# ADS1115 Sensor lambda result on Analog Pin A
+# ADS1115 Sensor lambda result on I2C
+#  # It's the value in satuated soil 
+#  - id: ads1115_soil_saturated
+#    type: float
+#    restore_value: no
+#    initial_value: '1.0'
+
+#  # Max voltage (including multiplier). The highter the drier
+#  - id: ads1115_soil_dry
+#    type: float
+#    restore_value: no
+#    initial_value: '2.04' with gain
 #################################################################
 ---
 lambda: |-
         ESP_LOGD("main", "ADS1115 val: %f", x );
-        float adj_soil_range = id(ads1115_soil_dry) - id(ads1115_soil_saturated);
-        float perc_adj = 100/adj_soil_range;
-        float adj_val = x - id(ads1115_soil_saturated);
-        float result = (adj_soil_range - adj_val) * perc_adj;
-        ESP_LOGD("main", "A0   adj_soil_range: %f  perc_adj: %f  adj_val: %f  ->Result: %f", adj_soil_range, perc_adj, adj_val, result );
 
-        return result;
+        if ( x > 2.04 || x < 0.5  ) return 0;
+        else if (x < 1.00 ) return 100;
+        else return (2.04 - x)/(2.04 - 1.00)*100.0;

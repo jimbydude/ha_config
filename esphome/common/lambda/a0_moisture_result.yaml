@@ -1,13 +1,25 @@
 #################################################################
 # Sensor lambda result on Analog Pin A
+# Voltage at which the sensor is reading not connected
+#    - id: adc_nc_value
+#      type: float
+#      restore_value: no
+#      initial_value: '0.05'
+#    # It's the value in satuated soil 
+#    - id: adc_soil_saturated
+#      type: float
+#      restore_value: no
+#      initial_value: '0.70'
+#    # Max voltage (including multiplier). The highter the drier
+#    - id: adc_soil_dry
+#      type: float
+#      restore_value: no
+#      initial_value: '2.3' with no multiplier '0.26'
 #################################################################
 ---
 lambda: |-
         ESP_LOGD("main", "A0 val: %f", x );
-        float adj_soil_range = id(adc_soil_dry) - id(adc_soil_saturated);
-        float perc_adj = 100/adj_soil_range;
-        float adj_val = x - id(adc_soil_saturated);
-        float result = (adj_soil_range - adj_val) * perc_adj;
-        ESP_LOGD("main", "A0   adj_soil_range: %f  perc_adj: %f  adj_val: %f  ->Result: %f", adj_soil_range, perc_adj, adj_val, result );
 
-        return result;
+        if ( x > 0.7 || x < 0.5) return 0;
+        else if (x < 0.26 ) return 100;
+        else return (0.7-x)/(0.7-0.26)*100.0;

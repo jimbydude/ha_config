@@ -1,5 +1,10 @@
 ################################################################
 # ADS1115 Analog multiplexer.
+#  # Voltage at which the sensor is reading not connected
+#  - id: adc_nc_value
+#    type: float
+#    restore_value: no
+#    initial_value: '0.5'
 ################################################################
 ---
 # Virtual A0
@@ -20,7 +25,7 @@ on_value:
   then:
     - lambda: |-
         // ESP_LOGD("main", "VA0 val (x): %f", x );
-        if ( id(${device}_va0).raw_state < id(adc_nc_value)  )
+        if ( id(${device}_va0).raw_state < 0.5  )
         {
           auto call = id(va0_status_led).turn_off();
           call.perform();  

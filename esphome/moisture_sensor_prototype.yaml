@@ -51,48 +51,6 @@ globals:
      restore_value: no
      initial_value: '0.5'
 
-#########################
-# ADC A0: Moisture Sensor Globals
-#########################
-   # Voltage at which the sensor is reading not connected
-   - id: adc_nc_value
-     type: float
-     restore_value: no
-     initial_value: '0.05'
-
-   # It's the value in satuated soil 
-   - id: adc_soil_saturated
-     type: float
-     restore_value: no
-     initial_value: '0.70'
-
-   # Max voltage (including multiplier). The highter the drier
-   - id: adc_soil_dry
-     type: float
-     restore_value: no
-     initial_value: '2.3'
-
-#########################
-# ADC ADS1115: Moisture Sensor Globals
-#########################
-   # Voltage at which the sensor is reading not connected
-   - id: ads1115_nc_value
-     type: float
-     restore_value: no
-     initial_value: '0.5'
-
-   # It's the value in satuated soil 
-   - id: ads1115_soil_saturated
-     type: float
-     restore_value: no
-     initial_value: '1.0'
-
-   # Max voltage (including multiplier). The highter the drier
-   - id: ads1115_soil_dry
-     type: float
-     restore_value: no
-     initial_value: '2.04'
-
 # Lowest Percentage, below this and soil is too dry
    - id: danger_threshold
      type: int
@@ -123,8 +81,8 @@ sensor:
 # Virtual A0
   - !include common/ads1115_a0_moisture.yaml
   - !include common/ads1115_a1_moisture.yaml
-  # - !include common/ads1115_a2_moisture.yaml
-  # - !include common/ads1115_a3_moisture.yaml
+  - !include common/ads1115_a2_moisture.yaml
+  - !include common/ads1115_a3_moisture.yaml
 
 ### END OF ADS115 BLOCK
 
@@ -234,7 +192,7 @@ font:
 #################################################################
 interval:
     - !include common/wifi_connection_status.yaml
-    - !include common/memory_usage.yaml 
+    # - !include common/memory_usage.yaml 
 
 
 # Setup Display to show sensor reading in real time.
@@ -265,7 +223,7 @@ display:
       it.line(0, info_line_y + 8, it.get_width(), info_line_y + 8);
 
       // Use array of ids to draw all
-      std::vector<float> array = {id( ${device}_a0).state, id( ${device}_va0).state, id( ${device}_va1).state};
+      std::vector<float> array = {id( ${device}_a0).state, id( ${device}_va0).state, id( ${device}_va1).state, id( ${device}_va2).state, id( ${device}_va3).state};
       for (int i=0; i<array.size(); ++i)
       {
         it.circle(badge_center + (badge_width * i), badge_y_offset, badge_radius);

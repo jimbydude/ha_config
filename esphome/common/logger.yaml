@@ -1,3 +1,4 @@
 ---
 logger:
-  level: DEBUG
+  level: debug
+  esp8266_store_log_strings_in_flash: true
