@@ -164,7 +164,7 @@ light:
 # Misc setup
 #################################################################
 switch:
-  # - !include common/switch/restart.yaml
+   - !include common/switch/restart.yaml
 
 #################################################################
 # List of fonts we are using for the OLED Display.

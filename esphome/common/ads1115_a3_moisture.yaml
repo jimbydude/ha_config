@@ -20,7 +20,8 @@ update_interval: ${update_interval}
 filters:
   - filter_out: nan
   # - !include filter/sliding_window.yaml
-  - !include lambda/ads1115_moisture_result.yaml
+  # - !include lambda/ads1115_moisture_result.yaml
+  - !include lambda/ads1115_resistance_moisture_result.yaml
 on_value:
   then:
     - lambda: |-
