@@ -3,11 +3,11 @@ substitutions:
   name: Moisture Sensor Prototype
   location: Test
   reboot_timeout: 1h
-  update_interval: 10s
+  update_interval: 1h
   update_interval_memory_usage: 5s
   update_interval_wifi_status: 10s
   update_interval_short: 10s
-  sliding_window: "15"
+  sliding_window: "5"
   i2c_sda: D2
   i2c_scl: D1
   i2c_scan: 'True'
