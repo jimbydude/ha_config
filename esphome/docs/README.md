@@ -78,7 +78,7 @@ For this, you can copy the [Travis Secrets] to `secrets.yaml` and fill in your s
 [dallas]: https://esphome.io/components/sensor/dallas.html
 [CSE7766]: https://esphome.io/components/sensor/cse7766.html
 [dht22]: https://esphome.io/components/sensor/dht.html
-[dht22]: https://esphome.io/components/sensor/dht.html
+[dht11]: https://esphome.io/components/sensor/dht.html
 [RF Receiver]: RFReceiver.md
 [ADS1115]: https://esphome.io/components/sensor/ads1115.html
 [NodeMCU]: https://esphome.io/devices/nodemcu_esp8266.html
