@@ -26,12 +26,16 @@ The following features are implemented for every device
 | Device | Type | Physical button | [GPIO power] | [UART GPIO] | [Script] | [Custom Sensor] |
 | -- | -- |:--:|:--:|:--:|:--:|:--:|
 | [moisture_sensor_prototype]     | [NodeMCU]             |   |   |   |   |   |
+| [Salt Level Sensor]   | [Esp01]             |   |   |   |   |   |
+| [Beer Fridge]   | [Esp01]             |   |   |   |   |   |
 
 ### Sensors
 
-| Device | [Status LED] | [bme280] ([i2c])  | [dallas] | [CSE7766] | [dht22] | [dht11] | [RF receiver] | [ADS1115] ([i2c]) | 
-| -- |:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
-| [moisture_sensor_prototype]     | X |   |   |  |  | X |  |  | X |
+| Device | [Status LED] | [bme280] ([i2c])  | [dallas] | [CSE7766] | [dht22] | [dht11] | [RF receiver] | [ADS1115] ([i2c]) | [FastLED |
+| -- |:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
+| [moisture_sensor_prototype]     | X |   |   |  |  | X |  |  | X | X |
+
+* Note: [FastLED] are addressable RGB strips
 
 ## Installation
 
@@ -58,6 +62,7 @@ For this, you can copy the [Travis Secrets] to `secrets.yaml` and fill in your s
 - [Receiving RF Codes](RFReceiver.md)
 
 [moisture_sensor_prototype]: https://github.com/jimbydude/esphome/blob/master/esphome/moisture_sensor_prototype.yaml 
+[Beer Fridge]: https://github.com/jimbydude/esphome/blob/master/esphome/beer_fridge.yaml 
 [Travis Secrets]: https://github.com/jimbydude/esphome/blob/master/esphome/.travis-secrets.yaml
 [Sonoff S20]: https://www.itead.cc/smart-socket.html
 [NodeMCU v2]: https://github.com/nodemcu/nodemcu-devkit-v1.0
@@ -82,3 +87,4 @@ For this, you can copy the [Travis Secrets] to `secrets.yaml` and fill in your s
 [RF Receiver]: RFReceiver.md
 [ADS1115]: https://esphome.io/components/sensor/ads1115.html
 [NodeMCU]: https://esphome.io/devices/nodemcu_esp8266.html
+[FastLED]: https://esphome.io/components/light/fastled.html?highlight=fastled
