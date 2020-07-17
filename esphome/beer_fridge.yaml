@@ -3,11 +3,11 @@ substitutions:
   name: Beer Fridge
   location: Test
   reboot_timeout: 1h
-  update_interval: 10s
+  update_interval: 15s
   update_interval_memory_usage: 5s
-  update_interval_wifi_status: 10s
+  update_interval_wifi_status: 10min
   update_interval_short: 10s
-  sliding_window: "1"
+  sliding_window: "4"
   dht_pin: GPIO1
 
 esphome:

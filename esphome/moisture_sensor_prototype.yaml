@@ -5,7 +5,7 @@ substitutions:
   reboot_timeout: 1h
   update_interval: 10min
   update_interval_memory_usage: 5s
-  update_interval_wifi_status: 10s
+  update_interval_wifi_status: 10min
   update_interval_short: 10s
   sliding_window: "5"
   i2c_sda: D2

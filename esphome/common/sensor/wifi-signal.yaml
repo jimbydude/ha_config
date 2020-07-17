@@ -1,5 +1,5 @@
 ---
 platform: wifi_signal
 name: ${name} WiFi Signal
-update_interval: 10s
+update_interval: ${update_interval_wifi_status}
 id: ${device}_wifi_signal
