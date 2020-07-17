@@ -1,0 +1,12 @@
+---
+strobe:
+  name: Ring Doorbell
+  colors:
+    - state: True
+      brightness: 100%
+      red: 100%
+      green: 100%
+      blue: 100%
+      duration: 700ms
+    - state: False
+      duration: 700ms

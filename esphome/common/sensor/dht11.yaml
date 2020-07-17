@@ -3,7 +3,7 @@
 # DHT11 Temperature and Humidity Sensor
 #################################################################
 platform: dht
-pin: D7
+pin: ${dht_pin}
 model: DHT11
 update_interval: ${update_interval}
 temperature:

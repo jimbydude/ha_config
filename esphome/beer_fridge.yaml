@@ -1,0 +1,94 @@
+substitutions:
+  device: beer_fridge
+  name: Beer Fridge
+  location: Test
+  reboot_timeout: 1h
+  update_interval: 10s
+  update_interval_memory_usage: 5s
+  update_interval_wifi_status: 10s
+  update_interval_short: 10s
+  sliding_window: "1"
+  dht_pin: GPIO1
+
+esphome:
+  name:  ${device}
+  platform: ESP8266
+  board: esp01_1m
+
+<<: !include common/wifi.yaml
+<<: !include common/api.yaml
+<<: !include common/ota.yaml
+<<: !include common/text_sensors.yaml
+<<: !include common/logger.yaml
+<<: !include common/binary_sensors.yaml
+
+#################################################################
+# Sensor Configuration
+#################################################################
+sensor:
+  - !include common/sensor/wifi-signal.yaml
+  - !include common/sensor/uptime.yaml
+  - !include common/sensor/dht11.yaml
+
+  # - platform: template
+  #   name: "Random Numbers"
+  #   id: random_sensor
+  #   lambda: |-
+  #     return rand() % 100;
+  #   update_interval: 5s
+
+interval:
+  interval: 5s
+  then:
+    - lambda: |-
+        if ( id(toggle_random).state == true)
+        {
+          const int numEffects = 6;
+          const char *effects_list[numEffects] = {"Twinkle", "Scan", "Fireworks","Rainbow","Random Twinkle","Color Wipe"};
+          int res =  rand() % (numEffects -1);
+          auto call = id(led_strip).turn_on();
+          call.set_effect( effects_list[res] );
+          call.perform();  
+        }
+
+#################################################################
+# Misc setup
+#################################################################
+switch:
+   - !include common/switch/restart.yaml
+   - platform: template
+     name: "Toggle Random"
+     id: toggle_random
+     turn_on_action:
+      - switch.template.publish:
+          id: toggle_random
+          state: ON
+     turn_off_action:
+      - switch.template.publish:
+          id: toggle_random
+          state: OFF
+      - light.turn_on:
+          id: led_strip
+          effect: "Ring Doorbell"
+    
+#################################################################
+# GRB WS2812B LED lights. PIN D5
+#################################################################
+light:
+  - platform: fastled_clockless
+    chipset: WS2812B
+    pin: GPIO2
+    num_leds: 3
+    rgb_order: GRB
+    name: "Beer Fridge Led Strip"
+    id: led_strip
+    effects:
+      - !include common/effect/strobe_danger.yaml
+      - !include common/effect/strobe_ring_doorbell.yaml
+      - addressable_rainbow:
+      - addressable_color_wipe:
+      - addressable_scan:
+      - addressable_twinkle:
+      - addressable_random_twinkle:
+      - addressable_fireworks:
+        

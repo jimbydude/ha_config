@@ -3,7 +3,7 @@ substitutions:
   name: Moisture Sensor Prototype
   location: Test
   reboot_timeout: 1h
-  update_interval: 1h
+  update_interval: 10min
   update_interval_memory_usage: 5s
   update_interval_wifi_status: 10s
   update_interval_short: 10s
@@ -19,6 +19,7 @@ substitutions:
   adc_gain: '2.048'
   # LED Values
   led_max_bright: '0.5'
+  dht_pin: D7
 
 esphome:
   name: ${device}
