@@ -25,9 +25,9 @@ The following features are implemented for every device
 
 | Device | Type | Physical button | [GPIO power] | [UART GPIO] | [Script] | [Custom Sensor] |
 | -- | -- |:--:|:--:|:--:|:--:|:--:|
-| [moisture_sensor_prototype]     | [NodeMCU]             |   |   |   |   |   |
-| [Salt Level Sensor]   | [Esp01]             |   |   |   |   |   |
-| [Beer Fridge]   | [Esp01]             |   |   |   |   |   |
+| [moisture_sensor_prototype]     | [NodeMCU]           |   |   |   |   |   |
+| [Salt Level Sensor]             | [Esp01]             |   |   |   |   |   |
+| [Beer Fridge]                   | [Esp01]             |   |   |   |   |   |
 
 ### Sensors
 
