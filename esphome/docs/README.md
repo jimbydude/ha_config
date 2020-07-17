@@ -32,7 +32,7 @@ The following features are implemented for every device
 ### Sensors
 
 | Device | [Status LED] | [bme280] ([i2c])  | [dallas] | [CSE7766] | [dht22] | [dht11] | [RF receiver] | [ADS1115] ([i2c]) | [FastLED] |
-| -- |:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
+| -- |:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
 | [moisture_sensor_prototype]     | X |   |   |  |  | X |  |  | X | X |
 | [beer fridge]                   |   |   |   |  |  | X |  |  |   | X |
 | [salt level]                    |   |   |   |  |  | X |  |  |   |   |
