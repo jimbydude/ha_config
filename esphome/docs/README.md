@@ -29,9 +29,9 @@ The following features are implemented for every device
 
 ### Sensors
 
-| Device | [Status LED] | [bme280] ([i2c])  | [dallas] | [CSE7766] | [dht22] | [RF receiver] | [ADS1115] ([i2c]) | 
+| Device | [Status LED] | [bme280] ([i2c])  | [dallas] | [CSE7766] | [dht22] | [dht11] | [RF receiver] | [ADS1115] ([i2c]) | 
 | -- |:--:|:--:|:--:|:--:|:--:|:--:|:--:|
-| [moisture_sensor_prototype]     | X |   |   | X |   |  | X |
+| [moisture_sensor_prototype]     | X |   |   |  |  | X |  |  | X |
 
 ## Installation
 
@@ -77,6 +77,7 @@ For this, you can copy the [Travis Secrets] to `secrets.yaml` and fill in your s
 [i2c]: https://esphome.io/components/i2c.html
 [dallas]: https://esphome.io/components/sensor/dallas.html
 [CSE7766]: https://esphome.io/components/sensor/cse7766.html
+[dht22]: https://esphome.io/components/sensor/dht.html
 [dht22]: https://esphome.io/components/sensor/dht.html
 [RF Receiver]: RFReceiver.md
 [ADS1115]: https://esphome.io/components/sensor/ads1115.html
