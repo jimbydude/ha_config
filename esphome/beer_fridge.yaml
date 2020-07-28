@@ -38,18 +38,24 @@ sensor:
   #   update_interval: 5s
 
 interval:
-  interval: 5s
+  interval: 10s
   then:
-    - lambda: |-
-        if ( id(toggle_random).state == true)
-        {
-          const int numEffects = 6;
-          const char *effects_list[numEffects] = {"Twinkle", "Scan", "Fireworks","Rainbow","Random Twinkle","Color Wipe"};
-          int res =  rand() % (numEffects -1);
-          auto call = id(led_strip).turn_on();
-          call.set_effect( effects_list[res] );
-          call.perform();  
-        }
+    if:
+      condition:
+        light.is_on: led_strip
+      then:
+          - lambda: |-
+              if ( id(toggle_doorbell).state == false )
+              {
+                const int numEffects = 4;
+                const char *effects_list[numEffects] = {"Scan", "Fireworks","Rainbow", "Color Wipe"};
+                int res =  rand() % (numEffects -1);
+                auto call = id(led_strip).turn_on();
+                call.set_effect( effects_list[res] );
+                call.perform();  
+              }
+      else:
+        logger.log: LED Strip Light is Currently Off
 
 #################################################################
 # Misc setup
@@ -57,19 +63,19 @@ interval:
 switch:
    - !include common/switch/restart.yaml
    - platform: template
-     name: "Toggle Random"
-     id: toggle_random
+     name: "Toggle Doorbell"
+     id: toggle_doorbell
      turn_on_action:
       - switch.template.publish:
-          id: toggle_random
+          id: toggle_doorbell
           state: ON
+      - light.turn_on:
+         id: led_strip
+         effect: "Ring Doorbell"
      turn_off_action:
       - switch.template.publish:
-          id: toggle_random
+          id: toggle_doorbell
           state: OFF
-      - light.turn_on:
-          id: led_strip
-          effect: "Ring Doorbell"
     
 #################################################################
 # GRB WS2812B LED lights. PIN D5
@@ -88,7 +94,7 @@ light:
       - addressable_rainbow:
       - addressable_color_wipe:
       - addressable_scan:
-      - addressable_twinkle:
-      - addressable_random_twinkle:
+      # - addressable_twinkle:
+      # - addressable_random_twinkle:
       - addressable_fireworks:
         

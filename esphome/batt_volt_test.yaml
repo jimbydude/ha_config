@@ -1,0 +1,47 @@
+substitutions:
+  device: batt_volt_test
+  name: Battery Voltage Test
+  location: Test
+  reboot_timeout: 1h
+  update_interval: 5s
+  update_interval_memory_usage: 5s
+  update_interval_wifi_status: 10min
+  update_interval_short: 10s
+  sliding_window: "3"
+  adc_pin: A0
+
+esphome:
+  name:  ${device}
+  platform: ESP8266
+  board: d1_mini
+
+<<: !include common/wifi.yaml
+<<: !include common/api.yaml
+<<: !include common/ota.yaml
+<<: !include common/text_sensors.yaml
+<<: !include common/logger.yaml
+<<: !include common/binary_sensors.yaml
+
+#################################################################
+# Sensor Configuration
+#################################################################
+sensor:
+  - !include common/sensor/wifi-signal.yaml
+  - !include common/sensor/uptime.yaml
+  - platform: adc
+    pin: ${adc_pin}
+    name: "Battery Voltage"
+    update_interval: ${update_interval}
+    filters:
+      - sliding_window_moving_average:
+          window_size: ${sliding_window}
+          send_every: ${sliding_window}
+          send_first_at: 1
+      - multiply: 4.2
+
+#################################################################
+# Misc setup
+#################################################################
+switch:
+   - !include common/switch/restart.yaml
+   
