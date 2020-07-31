@@ -12,9 +12,9 @@ platform: ads1115
 name: ADS1115 A0 ${name}
 multiplexer: 'A0_GND'
 id: ${device}_va0
-unit_of_measurement: ${adc_unit_of_measurement}
-icon: ${adc_icon}
-accuracy_decimals: ${adc_accuracy_decimals}
+unit_of_measurement: ${adc_a0_unit_of_measurement}
+icon: ${adc_a0_icon}
+accuracy_decimals: ${adc_a0_accuracy_decimals}
 gain: ${adc_gain}
 update_interval: ${update_interval}
 filters:

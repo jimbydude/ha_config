@@ -2,3 +2,4 @@
 logger:
   level: debug
   esp8266_store_log_strings_in_flash: true
+  baud_rate: ${logger_baud_rate}

@@ -1,0 +1,5 @@
+---
+uart:
+  baud_rate: ${uart_baud_rate} # speed to STC15L101EW
+  tx_pin: ${uart_tx_pin}
+  rx_pin: ${uart_rx_pin}

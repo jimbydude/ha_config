@@ -3,13 +3,19 @@ substitutions:
   name: Battery Voltage Test
   location: Test
   reboot_timeout: 1h
-  update_interval: 5s
+  update_interval: 10min
   update_interval_memory_usage: 5s
   update_interval_wifi_status: 10min
   update_interval_short: 10s
-  sliding_window: "3"
-  adc_pin: A0
-
+  sliding_window: "4"
+  logger_baud_rate: "115200"
+  adc_a0_pin: A0
+  adc_a0_multiplier: "4.2"
+  adc_a0_pin_name: "Battery (18650)"
+  adc_a0_icon: "mdi:battery"
+  adc_a0_accuracy_decimals: '2'
+  adc_a0_unit_of_measurement: "V"
+    
 esphome:
   name:  ${device}
   platform: ESP8266
@@ -28,16 +34,7 @@ esphome:
 sensor:
   - !include common/sensor/wifi-signal.yaml
   - !include common/sensor/uptime.yaml
-  - platform: adc
-    pin: ${adc_pin}
-    name: "Battery Voltage"
-    update_interval: ${update_interval}
-    filters:
-      - sliding_window_moving_average:
-          window_size: ${sliding_window}
-          send_every: ${sliding_window}
-          send_first_at: 1
-      - multiply: 4.2
+  - !include common/analog_sensor/adc_a0.yaml
 
 #################################################################
 # Misc setup

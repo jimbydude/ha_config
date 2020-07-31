@@ -1,13 +1,14 @@
 ---
 platform: adc
-name: ${name} A0
-pin: A0
+name: ${adc_a0_pin_name}
+pin: ${adc_a0_pin}
 id: ${device}_a0
 update_interval: ${update_interval_short}
 unit_of_measurement: ${adc_a0_unit_of_measurement}
 icon: ${adc_a0_icon}
 accuracy_decimals: ${adc_a0_accuracy_decimals}
 filters:
+  - multiply: ${adc_a0_multiplier}
   # - sliding_window_moving_average:
   #     window_size:  ${sliding_window}
   #     send_every:  ${sliding_window}

@@ -9,6 +9,7 @@ substitutions:
   update_interval_short: 10s
   sliding_window: "4"
   dht_pin: GPIO1
+  logger_baud_rate: "115200"
 
 esphome:
   name:  ${device}
