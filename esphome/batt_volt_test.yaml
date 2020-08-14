@@ -3,11 +3,11 @@ substitutions:
   name: Battery Voltage Test
   location: Test
   reboot_timeout: 1h
-  update_interval: 10min
+  update_interval: 10s
   update_interval_memory_usage: 5s
-  update_interval_wifi_status: 10min
+  update_interval_wifi_status: 10s
   update_interval_short: 10s
-  sliding_window: "4"
+  sliding_window: "1"
   logger_baud_rate: "115200"
   adc_a0_pin: A0
   adc_a0_multiplier: "4.2"
@@ -15,11 +15,16 @@ substitutions:
   adc_a0_icon: "mdi:battery"
   adc_a0_accuracy_decimals: '2'
   adc_a0_unit_of_measurement: "V"
-    
+  # Deep Sleep config
+  run_duration: 60s
+  sleep_duration: 10min
+
 esphome:
   name:  ${device}
   platform: ESP8266
   board: d1_mini
+
+<<: !include common/deep_sleep.yaml
 
 <<: !include common/wifi.yaml
 <<: !include common/api.yaml
