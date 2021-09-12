@@ -1,0 +1,6 @@
+---
+remote_receiver:
+  pin:
+    number: ${ir_receiver_pin}
+    inverted: true
+  dump: all

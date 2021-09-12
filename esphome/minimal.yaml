@@ -1,15 +1,26 @@
 ---
-substitutions:
-  device: minimal
-  reboot_timeout: 1d
+  substitutions:
+    device: minimal_device
+    reboot_timeout: 1d
+    name: Minimal D1 Mini Code
+    location: Test
+    update_interval: 10min
+    update_interval_memory_usage: 5s
+    update_interval_wifi_status: 1min
+    update_interval_short: 10s
+    logger_baud_rate: "115200"
 
-esphome:
-  name: ${device}
-  platform: ESP8266
-  board: esp01_1m
+  esphome:
+    name: ${device}
+    platform: ESP8266
+    board: d1_mini
+  
+  <<: !include common/wifi.yaml
+  <<: !include common/api.yaml
+  <<: !include common/ota.yaml
+  <<: !include common/text_sensors.yaml
+  <<: !include common/logger.yaml
 
-<<: !include common/wifi.yaml
-<<: !include common/ota.yaml
-logger:
-  level: ERROR
-  baud_rate: 0
+  sensor:
+    - !include common/sensor/wifi-signal.yaml
+    - !include common/sensor/uptime.yaml

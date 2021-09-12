@@ -1,239 +1,239 @@
-substitutions:
-  device: moisture_sensor_prototype
-  name: Moisture Sensor Prototype
-  location: Test
-  reboot_timeout: 1h
-  update_interval: 10min
-  update_interval_memory_usage: 5s
-  update_interval_wifi_status: 1min
-  update_interval_short: 10s
-  logger_baud_rate: "115200"
-  sliding_window: "5"
-  i2c_sda: D2
-  i2c_scl: D1
-  i2c_scan: 'True'
-  i2c_device: ads115_a
-  ads_address: '0x48'
-  adc_a0_pin: A0
-  adc_a0_multiplier: "4.2"
-  adc_a0_pin_name: "Battery (18650)"
-  adc_a0_icon: "mdi:battery"
-  adc_a0_accuracy_decimals: '1'
-  adc_a0_unit_of_measurement: "%"
-  dht_unit_of_measurement: "°F"
-  adc_gain: '2.048'
-  # LED Values
-  led_max_bright: '0.5'
-  dht_pin: D7
+  substitutions:
+    device: moisture_sensor_prototype
+    name: Moisture Sensor Prototype
+    location: Test
+    reboot_timeout: 1h
+    update_interval: 10min
+    update_interval_memory_usage: 5s
+    update_interval_wifi_status: 1min
+    update_interval_short: 10s
+    logger_baud_rate: "115200"
+    sliding_window: "5"
+    i2c_sda: D2
+    i2c_scl: D1
+    i2c_scan: 'True'
+    i2c_device: ads115_a
+    ads_address: '0x48'
+    adc_a0_pin: A0
+    adc_a0_multiplier: "4.2"
+    adc_a0_pin_name: "Battery (18650)"
+    adc_a0_icon: "mdi:battery"
+    adc_a0_accuracy_decimals: '1'
+    adc_a0_unit_of_measurement: "%"
+    dht_unit_of_measurement: "°F"
+    adc_gain: '2.048'
+    # LED Values
+    led_max_bright: '0.5'
+    dht_pin: D7
 
-esphome:
-  name: ${device}
-  platform: ESP8266
-  board: d1_mini
-  on_boot:
-    priority: -10
-    # ...
-    then:
-      - lambda: |-
-          Serial.println(ESP.getFreeHeap(),DEC); 
-
-
-<<: !include common/wifi.yaml
-<<: !include common/api.yaml
-<<: !include common/ota.yaml
-<<: !include common/text_sensors.yaml
-<<: !include common/logger.yaml
-<<: !include common/binary_sensors.yaml
-
-#
-# I2C Iniitalisation
-#
-<<: !include common/i2c.yaml
-<<: !include common/analog_sensor/ads1115.yaml
-    
-globals:
-   - id: led_max_brightness
-     type: float
-     restore_value: no
-     initial_value: '0.5'
-
-# Lowest Percentage, below this and soil is too dry
-   - id: danger_threshold
-     type: int
-     restore_value: no
-     initial_value: '30'
-# END GLOBALS
-
-#################################################################
-# Various Sensor Config
-#################################################################
-
-#################################################################
-# Sensor Configuration
-#################################################################
-
-sensor:
-  - !include common/sensor/wifi-signal.yaml
-  - !include common/sensor/uptime.yaml
-  - !include common/sensor/dht11.yaml
-  # TODO: Going to use this pin to monitor batt voltage
-  # Soil Sensore on Analog Pin A0
-  # - !include common/analog_sensor/adc_a0_moisture.yaml
-
-### END OF SENSOR CONFIG BLOCK
-
-################################################################
-# ADS1115 Analog multiplexer.
-################################################################
-# Virtual A0
-  - !include common/analog_sensor/ads1115_a0_moisture.yaml
-  - !include common/analog_sensor/ads1115_a1_moisture.yaml
-  - !include common/analog_sensor/ads1115_a2_moisture.yaml
-  - !include common/analog_sensor/ads1115_a3_moisture.yaml
-
-### END OF ADS115 BLOCK
-
-#################################################################
-# GRB WS2812B LED lights. PIN D5
-#################################################################
-light:
-  - platform: fastled_clockless
-    chipset: WS2812B
-    pin: D5
-    num_leds: 5
-    rgb_order: GRB
-    name: "FastLED WS2812B Light"
-    id: led_strip
-# # Soil Sensor on ESP A0
-#   - platform: partition
-#     name: "A0 LED"
-#     id: a0_status_led
-#     effects:
-#       - !include common/effect/strobe_danger.yaml
-#     segments:
-#       - id: led_strip
-#         from: 0
-#         to: 0
-# Soil Sensor on AD1115 A0-GND
-  - platform: partition
-    name: "VA0 Led"
-    id: va0_status_led
-    effects:
-      - !include common/effect/strobe_danger.yaml
-    segments:
-      - id: led_strip
-        from: 0
-        to: 0
-# Soil Sensor on AD1115 A1-GND
-  - platform: partition
-    name: "VA1 Led"
-    id: va1_status_led
-    effects:
-      - !include common/effect/strobe_danger.yaml
-    segments:
-      - id: led_strip
-        from: 1
-        to: 1
-# Soil Sensor on AD1115 A2-GND
-  - platform: partition
-    name: "VA2 Led"
-    id: va2_status_led
-    effects:
-      - !include common/effect/strobe_danger.yaml
-    segments:
-      - id: led_strip
-        from: 2
-        to: 2
-# Soil Sensor on AD1115 A3-GND
-  - platform: partition
-    name: "VA3 Led"
-    id: va3_status_led
-    effects:
-      - !include common/effect/strobe_danger.yaml
-    segments:
-      - id: led_strip
-        from: 3
-        to: 3
-# Status LED
-  - platform: partition
-    name: "led6"
-    id: status_led
-    effects:
-      - !include common/effect/strobe_wifi_connecting.yaml
-      - !include common/effect/strobe_danger.yaml
-    segments:
-      - id: led_strip
-        from: 4
-        to: 4
-### END OF LED LIGHT (WS2812B) BLOCK
-
-#################################################################
-# Misc setup
-#################################################################
-switch:
-   - !include common/switch/restart.yaml
-
-#################################################################
-# List of fonts we are using for the OLED Display.
-#################################################################
-font:
-  - file: 'ttf/arial.ttf'
-    id: font_arial
-    size: 10
-  # - file: 'ttf/times.ttf'
-  #   id: font_times
-  #   size: 16
-    
-#################################################################
-# OLED Display Configuration
-#################################################################
-# Cycle through pages on a timer
-# interval:
-#   - interval: 5s
-#     then:
-#       - display.page.show_next: oled_display
-#       - component.update: oled_display
-
-#################################################################
-# Check Wifi Connection
-#################################################################
-interval:
-    - !include common/wifi_connection_status.yaml
-    # - !include common/memory_usage.yaml 
+  esphome:
+    name: ${device}
+    platform: ESP8266
+    board: d1_mini
+    on_boot:
+      priority: -10
+      # ...
+      then:
+        - lambda: |-
+            Serial.println(ESP.getFreeHeap(),DEC); 
 
 
-# Setup Display to show sensor reading in real time.
-display:
-  - platform: ssd1306_i2c
-    model: "SSD1306 128x64"
-    reset_pin: D0
-    address: 0x3C
-    id: oled_display
-    
-    lambda: |-
-      // static int disp_height = it.get_height();
-      int badge_center = it.get_width()/(5 * 2); 
-      int badge_width = badge_center*2;
-      int badge_radius = badge_center - 2;
-      int badge_y_offset = 53;
-      int badge_name_pos = badge_y_offset - badge_radius - 6;
-      int info_line_y = 22;
+  <<: !include common/wifi.yaml
+  <<: !include common/api.yaml
+  <<: !include common/ota.yaml
+  <<: !include common/text_sensors.yaml
+  <<: !include common/logger.yaml
+  <<: !include common/binary_sensors.yaml
 
-      it.print(0, 0, id(font_arial), "Rosies Planter Box");
-      // Separate with a nice line
-      it.line(0, info_line_y - 8, it.get_width(), info_line_y -8);
+  #
+  # I2C Iniitalisation
+  #
+  <<: !include common/i2c.yaml
+  <<: !include common/analog_sensor/ads1115.yaml
+      
+  globals:
+    - id: led_max_brightness
+      type: float
+      restore_value: no
+      initial_value: '0.5'
 
-      // Display Wifi, temp and humidity here and the a line.
-      it.printf(1, info_line_y, id(font_arial), "Wifi: %2.0fdb", id(${device}_wifi_signal).state);
-      it.printf(56, info_line_y, id(font_arial), "T: %2.0f°F", id(${device}_dht11_temp).state * (9.0/5.0) + 32.0);
-      it.printf(91, info_line_y, id(font_arial), "H:%2.0f%%", id(${device}_dht11_hum).state);
-      it.line(0, info_line_y + 8, it.get_width(), info_line_y + 8);
+  # Lowest Percentage, below this and soil is too dry
+    - id: danger_threshold
+      type: int
+      restore_value: no
+      initial_value: '30'
+  # END GLOBALS
 
-      // Use array of ids to draw all
-      std::vector<float> array = {id( ${device}_va0).state, id( ${device}_va1).state, id( ${device}_va2).state, id( ${device}_va3).state};
-      for (int i=0; i<array.size(); ++i)
-      {
-        it.circle(badge_center + (badge_width * i), badge_y_offset, badge_radius);
-        it.printf(badge_center + (badge_width * i), badge_name_pos, id(font_arial), TextAlign::CENTER, "S%d", i + 1);
-        it.printf(badge_center + (badge_width * i), badge_y_offset, id(font_arial), TextAlign::CENTER, "%2.0f", array[i]);
-      }
+  #################################################################
+  # Various Sensor Config
+  #################################################################
+
+  #################################################################
+  # Sensor Configuration
+  #################################################################
+
+  sensor:
+    - !include common/sensor/wifi-signal.yaml
+    - !include common/sensor/uptime.yaml
+    - !include common/sensor/dht11.yaml
+    # TODO: Going to use this pin to monitor batt voltage
+    # Soil Sensore on Analog Pin A0
+    # - !include common/analog_sensor/adc_a0_moisture.yaml
+
+  ### END OF SENSOR CONFIG BLOCK
+
+  ################################################################
+  # ADS1115 Analog multiplexer.
+  ################################################################
+  # Virtual A0
+    - !include common/analog_sensor/ads1115_a0_moisture.yaml
+    - !include common/analog_sensor/ads1115_a1_moisture.yaml
+    - !include common/analog_sensor/ads1115_a2_moisture.yaml
+    - !include common/analog_sensor/ads1115_a3_moisture.yaml
+
+  ### END OF ADS115 BLOCK
+
+  #################################################################
+  # GRB WS2812B LED lights. PIN D5
+  #################################################################
+  light:
+    - platform: fastled_clockless
+      chipset: WS2812B
+      pin: D5
+      num_leds: 5
+      rgb_order: GRB
+      name: "FastLED WS2812B Light"
+      id: led_strip
+  # # Soil Sensor on ESP A0
+  #   - platform: partition
+  #     name: "A0 LED"
+  #     id: a0_status_led
+  #     effects:
+  #       - !include common/effect/strobe_danger.yaml
+  #     segments:
+  #       - id: led_strip
+  #         from: 0
+  #         to: 0
+  # Soil Sensor on AD1115 A0-GND
+    - platform: partition
+      name: "VA0 Led"
+      id: va0_status_led
+      effects:
+        - !include common/effect/strobe_danger.yaml
+      segments:
+        - id: led_strip
+          from: 0
+          to: 0
+  # Soil Sensor on AD1115 A1-GND
+    - platform: partition
+      name: "VA1 Led"
+      id: va1_status_led
+      effects:
+        - !include common/effect/strobe_danger.yaml
+      segments:
+        - id: led_strip
+          from: 1
+          to: 1
+  # Soil Sensor on AD1115 A2-GND
+    - platform: partition
+      name: "VA2 Led"
+      id: va2_status_led
+      effects:
+        - !include common/effect/strobe_danger.yaml
+      segments:
+        - id: led_strip
+          from: 2
+          to: 2
+  # Soil Sensor on AD1115 A3-GND
+    - platform: partition
+      name: "VA3 Led"
+      id: va3_status_led
+      effects:
+        - !include common/effect/strobe_danger.yaml
+      segments:
+        - id: led_strip
+          from: 3
+          to: 3
+  # Status LED
+    - platform: partition
+      name: "led6"
+      id: status_led
+      effects:
+        - !include common/effect/strobe_wifi_connecting.yaml
+        - !include common/effect/strobe_danger.yaml
+      segments:
+        - id: led_strip
+          from: 4
+          to: 4
+  ### END OF LED LIGHT (WS2812B) BLOCK
+
+  #################################################################
+  # Misc setup
+  #################################################################
+  switch:
+    - !include common/switch/restart.yaml
+
+  #################################################################
+  # List of fonts we are using for the OLED Display.
+  #################################################################
+  font:
+    - file: 'ttf/arial.ttf'
+      id: font_arial
+      size: 10
+    # - file: 'ttf/times.ttf'
+    #   id: font_times
+    #   size: 16
+      
+  #################################################################
+  # OLED Display Configuration
+  #################################################################
+  # Cycle through pages on a timer
+  # interval:
+  #   - interval: 5s
+  #     then:
+  #       - display.page.show_next: oled_display
+  #       - component.update: oled_display
+
+  #################################################################
+  # Check Wifi Connection
+  #################################################################
+  interval:
+      - !include common/wifi_connection_status.yaml
+      # - !include common/memory_usage.yaml 
+
+
+  # Setup Display to show sensor reading in real time.
+  display:
+    - platform: ssd1306_i2c
+      model: "SSD1306 128x64"
+      reset_pin: D0
+      address: 0x3C
+      id: oled_display
+      
+      lambda: |-
+        // static int disp_height = it.get_height();
+        int badge_center = it.get_width()/(5 * 2); 
+        int badge_width = badge_center*2;
+        int badge_radius = badge_center - 2;
+        int badge_y_offset = 53;
+        int badge_name_pos = badge_y_offset - badge_radius - 6;
+        int info_line_y = 22;
+
+        it.print(0, 0, id(font_arial), "Rosies Planter Box");
+        // Separate with a nice line
+        it.line(0, info_line_y - 8, it.get_width(), info_line_y -8);
+
+        // Display Wifi, temp and humidity here and the a line.
+        it.printf(1, info_line_y, id(font_arial), "Wifi: %2.0fdb", id(${device}_wifi_signal).state);
+        it.printf(56, info_line_y, id(font_arial), "T: %2.0f°F", id(${device}_dht11_temp).state * (9.0/5.0) + 32.0);
+        it.printf(91, info_line_y, id(font_arial), "H:%2.0f%%", id(${device}_dht11_hum).state);
+        it.line(0, info_line_y + 8, it.get_width(), info_line_y + 8);
+
+        // Use array of ids to draw all
+        std::vector<float> array = {id( ${device}_va0).state, id( ${device}_va1).state, id( ${device}_va2).state, id( ${device}_va3).state};
+        for (int i=0; i<array.size(); ++i)
+        {
+          it.circle(badge_center + (badge_width * i), badge_y_offset, badge_radius);
+          it.printf(badge_center + (badge_width * i), badge_name_pos, id(font_arial), TextAlign::CENTER, "S%d", i + 1);
+          it.printf(badge_center + (badge_width * i), badge_y_offset, id(font_arial), TextAlign::CENTER, "%2.0f", array[i]);
+        }
