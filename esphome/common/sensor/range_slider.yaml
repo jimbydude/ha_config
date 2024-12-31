@@ -1,0 +1,4 @@
+platform: homeassistant
+name: "Template number HA"
+id: vent_set_temp
+entity_id: input_number.vornado_max_temp

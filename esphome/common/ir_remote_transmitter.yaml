@@ -3,3 +3,4 @@ remote_transmitter:
     pin: ${ir_transmitter_pin}
     # Infrared remotes use a 50% carrier signal
     carrier_duty_percent: 50%
+    

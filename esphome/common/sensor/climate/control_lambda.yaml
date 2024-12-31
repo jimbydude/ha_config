@@ -1,0 +1,45 @@
+#################################################################
+# Contorl the Vornado window fan based on conditions
+#   If outside temp < (Hallway temp && 'set point') then turn on
+#################################################################
+---
+lambda: |-
+  ESP_LOGD("main", "Current Outside Temp %f", id(accuweather).raw_state);
+
+  // Get the current HA value for the set temp
+  float setTemp = id(vent_set_temp).raw_state;
+  ESP_LOGD("main", "Current Set Temp: %f", setTemp);
+
+  // Get the current Hallway temp
+  float hallwayTemp = id(current_hallway_temperature).raw_state;
+  ESP_LOGD("main", "Current Hallway Temp: %f", hallwayTemp);
+
+  // Get the current fan mode
+  bool fanStatus = id(hallway_fan_status).state;
+  ESP_LOGD("main", "Current fan mode: %s", fanStatus ? "On" : "Off");
+
+  ESP_LOGD("main", "Turn on if outside below: %f", setTemp);
+  bool powerState = id(power).state;
+  ESP_LOGD("main", "Power State Currently: %s", powerState ? "true" : "false");
+  if ( id(accuweather).raw_state < setTemp && hallwayTemp > setTemp )
+  {
+    ESP_LOGD("main", "Attempt to turn ON");
+    // Skip if already on
+    if ( powerState != true ) {
+      ESP_LOGD("main", "TURN ON");
+      id(power).turn_on();
+    }
+    else {
+      ESP_LOGD("main", "Already ON");
+    }
+  } else {
+    ESP_LOGD("main", "Attempt to OFF");
+    // Skip if already off
+    if ( powerState != false ) {
+      id(power).turn_off();
+      ESP_LOGD("main", "TURN OFF");
+    }
+    else {
+      ESP_LOGD("main", "Already OFF");
+    }
+  }

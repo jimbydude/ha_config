@@ -1,7 +1,129 @@
-secrets.yaml
-*.log
-*.xml
+# Home Assistant Configuration
 *.db
-*.sqlite
-*.storage/
-OZW_Log.txt
+*.db-shm
+*.db-wal
+*.log
+*.yaml.backup
+*.yaml.save
+home-assistant_v2.db*
+home-assistant.log
+.OAUTH2_TOKEN_CACHE
+
+# Secret files
+secrets.yaml
+custom_components/**/secrets.yaml
+.env
+*.key
+*.crt
+*.pem
+*.enc
+*.cert
+
+# Temporary and lock files
+*.lock
+*.swp
+*.tmp
+*.bak
+
+# Python virtual environment
+.venv/
+env/
+venv/
+__pycache__/
+*.py[cod]
+*.so
+*.pyo
+
+# System files
+.DS_Store
+Thumbs.db
+*.iml
+.idea/
+.vscode/
+*.code-workspace
+.AppleDouble
+.LSOverride
+.Trash-*
+ehthumbs.db
+Desktop.ini
+
+# Docker and Supervisor
+*.tar
+*.gz
+*.zip
+addons/local/
+config/.storage/
+config/ssl/
+config/tmp/
+config/home-assistant_v2.db*
+config/home-assistant.log*
+
+# Node.js (if applicable)
+node_modules/
+npm-debug.log*
+
+# Node-RED-specific ignores
+node_modules/
+*.backup
+*.log
+.flow.json
+.flow.json.backup
+*.flows.json~
+*.flows_cred.json
+*.flows_cred.json.backup
+.settings.js
+.settings.json.backup
+lib/*.js.map
+lib/*.json
+lib/.config.json
+lib/.config.json.backup
+lib/node_modules/
+flows.json
+
+# HACS and custom components
+custom_components/hacs/
+
+# Logs and debug artifacts
+coverage/
+*.testresult
+*.code-coverage
+*.log.*
+
+# Internal Home Assistant files
+.storage/
+.storage/assist_pipeline.pipelines
+.storage/auth
+.storage/auth_provider.homeassistant
+.storage/bluetooth.passive_update_processor
+.storage/cloud
+.storage/core.area_registry
+.storage/core.config
+.storage/core.config_entries
+.storage/core.device_registry
+.storage/core.entity_registry
+.storage/core.restore_state
+.storage/core.uuid
+
+# Ignore SQLite database files
+home-assistant_v2.db*
+*.db-shm
+*.db-wal
+
+# Ignore all files in www, except for specific custom files
+www/*
+!www/*.css
+!www/*.png
+!www/*.jpg
+!www/*.svg
+!www/*.js
+
+# Miscellaneous
+.backups/
+.local/
+.cloud/
+.config/
+.cache/
+
+# Ignore Home Assistant cloud data
+.cloud/
+

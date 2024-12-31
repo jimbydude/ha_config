@@ -24,14 +24,14 @@ esphome:
   platform: ESP8266
   board: d1_mini
 
-<<: !include common/deep_sleep.yaml
+  <<: !include common/deep_sleep.yaml
 
-<<: !include common/wifi.yaml
-<<: !include common/api.yaml
-<<: !include common/ota.yaml
-<<: !include common/text_sensors.yaml
-<<: !include common/logger.yaml
-<<: !include common/binary_sensors.yaml
+  <<: !include common/wifi.yaml
+  <<: !include common/api.yaml
+  <<: !include common/ota.yaml
+  <<: !include common/text_sensors.yaml
+  <<: !include common/logger.yaml
+  <<: !include common/binary_sensors.yaml
 
 #################################################################
 # Sensor Configuration

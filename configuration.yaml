@@ -11,4 +11,18 @@ automation: !include automations.yaml
 script: !include scripts.yaml
 scene: !include scenes.yaml
 
-sensor: !include sensors.yaml
+# Example configuration.yaml entry
+aqualogic:
+  host: 192.168.42.117
+  port: 80
+  
+sensor:
+  - platform: aqualogic
+    monitored_conditions:
+      - pool_temp
+
+switch:
+  - platform: aqualogic
+    monitored_conditions:
+      - lights
+      - filter

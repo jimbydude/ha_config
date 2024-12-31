@@ -1,0 +1,13 @@
+---
+- platform: homeassistant
+  name: "Upstairs Hallway from HA"
+  id: current_hallway_temperature
+  entity_id: climate.upstairs_hallway
+  attribute: current_temperature
+  internal: true
+- platform: homeassistant
+  name: "Upstairs Hallway from HA"
+  id: hallway_fan_status
+  entity_id: climate.upstairs_hallway
+  attribute: fan
+  internal: true

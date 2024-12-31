@@ -1,0 +1,110 @@
+  substitutions:
+    device: vornado_vent_control
+    reboot_timeout: 1d
+    name: Vornado Window Vent
+    location: Test
+    update_interval: 30min
+    update_interval_memory_usage: 5s
+    update_interval_wifi_status: 1min
+    update_interval_short: 10s
+    logger_baud_rate: "0"
+    ir_transmitter_pin: GPIO3
+    ir_device_name: Window Vent
+    # Deep Sleep config
+    run_duration: 5min
+    sleep_duration: 5min
+
+  esphome:
+    name: ${device}
+    platform: ESP8266
+    board: esp01_1m
+    esp8266_restore_from_flash: true
+    on_boot:
+      priority: -500
+      then:
+        - delay: 10s
+        - wait_until:
+            wifi.connected:
+        - logger.log: "Wifi Connected. Wait for API"
+        - wait_until:
+            api.connected:
+        - logger.log: "API Connected. Post Boot Climate Check"
+        - !include common/sensor/climate/control_lambda.yaml
+
+  interval:
+    interval: ${update_interval}
+    then:
+      - !include common/sensor/climate/control_lambda.yaml
+
+  <<: !include common/wifi.yaml
+  <<: !include common/api.yaml
+  <<: !include common/ota.yaml
+  <<: !include common/logger.yaml
+  # <<: !include common/deep_sleep.yaml
+
+  text_sensor:
+    - !include common/text_sensor/wifi-info.yaml
+
+  sensor:
+    - !include common/sensor/wifi-signal.yaml
+    - !include common/sensor/uptime.yaml
+    - !include common/sensor/range_slider.yaml
+    - !include common/sensor/climate/accuweather.yaml
+     #template: common/sensor/climate/ecobee.yaml
+    - platform: homeassistant
+      name: "Upstairs Hallway Temperature from HA"
+      id: current_hallway_temperature
+      entity_id: climate.upstairs_hallway
+      attribute: current_temperature
+      internal: true
+    - platform: homeassistant
+      name: "Upstairs Hallway Fan Status from HA"
+      id: hallway_fan_status
+      entity_id: climate.upstairs_hallway
+      attribute: fan
+      internal: true
+    # - platform: homeassistant
+    #   name: "OpenWeatherMap"
+    #   entity_id: sensor.openweathermap_temperature
+    #   internal: true
+
+  <<: !include common/ir_remote_transmitter.yaml
+
+  switch:
+    - !include common/switch/restart.yaml
+    - platform: template
+      name: ${ir_device_name} Power
+      id: power
+      restore_state: true
+      turn_on_action:
+        - switch.template.publish:
+            id: power
+            state: ON
+        - remote_transmitter.transmit_raw:
+            carrier_frequency: 38kHz
+            <<: !include common/ir_codes/window_vent/power.yaml
+      turn_off_action:
+          then:
+            - switch.template.publish:
+                id: power
+                state: OFF
+            - remote_transmitter.transmit_raw:
+                carrier_frequency: 38kHz
+                <<: !include common/ir_codes/window_vent/power.yaml
+            - delay: 1s
+            - remote_transmitter.transmit_raw:
+                carrier_frequency: 38kHz
+                <<: !include common/ir_codes/window_vent/power.yaml
+    - platform: template
+      name: ${ir_device_name} Increase Speed
+      turn_on_action:
+        - remote_transmitter.transmit_raw:
+            carrier_frequency: 38kHz
+            <<: !include common/ir_codes/window_vent/speed_up.yaml
+    - platform: template
+      name: ${ir_device_name} Decrease Speed
+      turn_on_action:
+        - remote_transmitter.transmit_raw:
+            carrier_frequency: 38kHz
+            <<: !include common/ir_codes/window_vent/speed_down.yaml
+      

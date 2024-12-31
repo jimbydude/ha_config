@@ -1,0 +1,37 @@
+platform: homeassistant
+id: accuweather
+name: "AccuWeather"
+entity_id: weather.home
+attribute: temperature
+internal: true
+
+# on_value:
+#         then:
+#           - lambda: |-
+#               ESP_LOGD("main", "Current Outside Temp %f", x);
+
+#               // Get the current HA value for the set temp
+#               float setTemp = id(vent_set_temp).raw_state;
+#               ESP_LOGD("main", "Current Set Temp: %f", setTemp);
+
+#               // Get the current Hallway temp
+#               float hallwayTemp = id(current_hallway_temperature).raw_state;
+#               ESP_LOGD("main", "Current Hallway Temp: %f", hallwayTemp);
+
+#               ESP_LOGD("main", "Turn on if below: %f", setTemp);
+#               if ( x < setTemp && hallwayTemp > setTemp )
+#               {
+#                 ESP_LOGD("main", "ATTEMPT TURN ON");
+#                 // Skip if already on
+#                 if ( id(power).state == false ) {
+#                   ESP_LOGD("main", "TURN ON");
+#                   id(power).turn_on();
+#                 }
+#               } else {
+#                 ESP_LOGD("main", "ATTEMPT TURN OFF");
+#                 // Skip if already off
+#                 if ( id(power).state == true ) {
+#                   id(power).turn_off();
+#                   ESP_LOGD("main", "TURN OFF");
+#                 }
+#               }
