@@ -127,3 +127,4 @@ www/*
 # Ignore Home Assistant cloud data
 .cloud/
 
+# Updated for hopeully all ignorable stuff
