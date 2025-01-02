@@ -3,7 +3,7 @@ esphome:
   friendly_name: 8266 Template Device
 
 esp8266:
-  board: esp01_1m
+  board: d1_mini
 
 # Enable logging
 logger:
@@ -27,4 +27,11 @@ wifi:
     password: "URVh5BFh5nfR"
 
 captive_portal:
-    
+
+# Example configuration entry
+light:
+  - platform: status_led
+    name: "Switch state"
+    pin:
+      number: GPIO2
+      inverted: true

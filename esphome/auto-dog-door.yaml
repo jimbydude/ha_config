@@ -1,6 +1,7 @@
 substitutions:
   device: auto_dog_door
   name: Automatic Dog Door
+  led_status: GPIO2
   motor_forward_pin: GPIO4
   motor_reverse_pin: GPIO5
   button_pin: GPIO14
@@ -32,8 +33,17 @@ esphome:
 <<: !include common/logger.yaml
 <<: !include common/binary_sensors.yaml
 
+#################################################################
+# Misc setup
+#################################################################
+switch:
+  - !include common/switch/restart.yaml
+
 sensor:
   - !include common/sensor/uptime.yaml
+
+light:
+  - !include common/light/led_status.yaml
 
 output:
   - platform: esp8266_pwm
@@ -64,20 +74,25 @@ binary_sensor:
         - lambda: |-
             if (id(endstop_top).state) {
               // Door is at the top, move it down
-              id(dog_door).direction = fan::FanDirection::REVERSE;
-              id(dog_door).turn_on();
+              auto call = id(dog_door).turn_on();
+              call.set_direction(fan::FanDirection::REVERSE);
+              call.perform();
             } else if (id(endstop_bottom).state) {
               // Door is at the bottom, move it up
-              id(dog_door).direction = fan::FanDirection::FORWARD;
-              id(dog_door).turn_on();
+              auto call = id(dog_door).turn_on();
+              call.set_direction(fan::FanDirection::FORWARD);
+              call.perform();
             } else {
               // Door is in the middle, toggle the direction
               if (id(dog_door).direction == fan::FanDirection::FORWARD) {
-                id(dog_door).direction = fan::FanDirection::REVERSE;
+                auto call = id(dog_door).turn_on();
+                call.set_direction(fan::FanDirection::REVERSE);
+                call.perform();
               } else {
-                id(dog_door).direction = fan::FanDirection::FORWARD;
+                auto call = id(dog_door).turn_on();
+                call.set_direction(fan::FanDirection::FORWARD);
+                call.perform();
               }
-              id(dog_door).turn_on();
             }
 
   # Endstop at the top
@@ -86,11 +101,13 @@ binary_sensor:
     pin:
       number: ${endstop_top_pin}
       mode: INPUT_PULLUP
-      inverted: true
+      inverted: False
     on_press:
       then:
-        - lambda: |-
-            id(dog_door).turn_off(); // Stop motor when top endstop is triggered
+        - fan.turn_off: dog_door
+    on_release:
+      then:
+        - logger.log: "Endstop Top Released: No action taken"
 
   # Endstop at the bottom
   - platform: gpio
@@ -98,8 +115,10 @@ binary_sensor:
     pin:
       number: ${endstop_bottom_pin}
       mode: INPUT_PULLUP
-      inverted: true
+      inverted: False
     on_press:
       then:
-        - lambda: |-
-            id(dog_door).turn_off(); // Stop motor when bottom endstop is triggered
+        - fan.turn_off: dog_door
+    on_release:
+      then:
+        - logger.log: "Endstop bottom Released: No action taken"

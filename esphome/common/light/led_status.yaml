@@ -1,0 +1,5 @@
+platform: status_led
+name: "Device Status"
+pin:
+  number: ${led_status}
+  inverted: true
