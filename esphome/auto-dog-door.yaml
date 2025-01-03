@@ -14,36 +14,147 @@ substitutions:
   update_interval_short: 10s
   logger_baud_rate: "115200"
 
-esphome:
-    name: ${device}
-    platform: ESP8266
-    board: d1_mini
-    on_boot:
-      priority: -10
-      # ...
-      then:
-        - lambda: |-
-            Serial.println(ESP.getFreeHeap(),DEC); 
+globals:
+  - id: is_blocked
+    type: bool
+    restore_value: no
+    initial_value: "false"
+  - id: is_locked
+    type: bool
+    restore_value: no
+    initial_value: "false"
 
+esphome:
+  name: ${device}
+  platform: ESP8266
+  board: d1_mini
+  on_boot:
+    priority: -10
+    then:
+      - lambda: |-
+          ESP_LOGD("boot", "Free heap: %d", ESP.getFreeHeap());
 
 <<: !include common/wifi.yaml
 <<: !include common/api.yaml
 <<: !include common/ota.yaml
-<<: !include common/text_sensors.yaml
 <<: !include common/logger.yaml
+<<: !include common/text_sensors.yaml
 <<: !include common/binary_sensors.yaml
 
-#################################################################
-# Misc setup
-#################################################################
+light:
+  - !include common/light/led_status.yaml
+
+script:
+  # Set Blocked/Unblocked
+  - id: set_blocked
+    parameters:
+      state: bool
+    then:
+      - lambda: |-
+          id(is_blocked) = state;
+          if (state) {
+            ESP_LOGD("set_blocked", "Path is BLOCKED.");
+          } else {
+            ESP_LOGD("set_blocked", "Path is UNBLOCKED.");
+          }
+      - if:
+          condition:
+            lambda: "return state;"  # Only open if blocked
+          then:
+            - script.execute: open_door
+
+  # Lock/Unlock Door
+  - id: set_locked
+    parameters:
+      state: bool
+    then:
+      - lambda: |-
+          id(is_locked) = state;
+          if (state) {
+            ESP_LOGD("set_locked", "Door is BLOCKED.");
+          } else {
+            ESP_LOGD("set_locked", "Door is UNLOCKED.");
+          }
+
+  # Open Door
+  - id: open_door
+    then:
+      - lambda: |-
+          if (id(is_locked)) {
+            ESP_LOGD("open_door", "System is LOCKED! Cannot open.");
+            return;
+          }
+          ESP_LOGD("open_door", "Opening the door...");
+          auto call = id(dog_door).turn_on();
+          call.set_direction(fan::FanDirection::FORWARD);
+          call.perform();
+
+  # Close Door
+  - id: close_door
+    then:
+      - lambda: |-
+          if (id(is_locked)) {
+            ESP_LOGD("close_door", "System is LOCKED! Cannot close.");
+            return;
+          }
+          ESP_LOGD("close_door", "Closing the door...");
+          auto call = id(dog_door).turn_on();
+          call.set_direction(fan::FanDirection::REVERSE);
+          call.perform();
+
 switch:
   - !include common/switch/restart.yaml
+
+  - platform: template
+    name: "Lock Dog Door"
+    lambda: |-
+      return id(is_locked);
+    turn_on_action:
+      - script.execute:
+          id: set_locked
+          state: true
+    turn_off_action:
+      - script.execute:
+          id: set_locked
+          state: false
+
+button:
+  - platform: template
+    name: "Reverse Dog Door Direction"
+    on_press:
+      then:
+        - lambda: |-
+            if (id(dog_door).direction == fan::FanDirection::FORWARD) {
+              ESP_LOGD("reverse_button", "Reversing to close the door...");
+              id(close_door).execute();  // Call the close_door script
+            } else {
+              ESP_LOGD("reverse_button", "Reversing to open the door...");
+              id(open_door).execute();  // Call the open_door script
+            }
 
 sensor:
   - !include common/sensor/uptime.yaml
 
-light:
-  - !include common/light/led_status.yaml
+  - platform: adc
+    pin: A0
+    name: "Photodiode Sensor"
+    update_interval: 1s
+    filters:
+      - multiply: 3.3
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: "return x < 2.00;"  # Threshold for block detection
+            then:
+              - script.execute:
+                  id: set_blocked
+                  state: true
+              - script.execute: open_door  # Open door immediately if blocked
+            else:
+              - script.execute:
+                  id: set_blocked
+                  state: false
 
 output:
   - platform: esp8266_pwm
@@ -60,9 +171,23 @@ fan:
     pin_a: motor_forward_pin
     pin_b: motor_reverse_pin
     decay_mode: slow
+    on_speed_set:
+      then:
+        - lambda: |-
+            auto speed = id(dog_door).state;  // Get the current speed
+            if (speed == 0.33f) {
+              ESP_LOGD("fan", "Speed set to LOW (33%)");
+              // Logic for LOW speed (e.g., adjust PWM externally if needed)
+            } else if (speed == 0.66f) {
+              ESP_LOGD("fan", "Speed set to MEDIUM (66%)");
+              // Logic for MEDIUM speed
+            } else if (speed == 1.0f) {
+              ESP_LOGD("fan", "Speed set to HIGH (100%)");
+              // Logic for HIGH speed
+            }
 
+# This is physical button
 binary_sensor:
-  # Button to toggle motor direction
   - platform: gpio
     id: toggle_button
     pin:
@@ -72,53 +197,31 @@ binary_sensor:
     on_press:
       then:
         - lambda: |-
-            if (id(endstop_top).state) {
-              // Door is at the top, move it down
-              auto call = id(dog_door).turn_on();
-              call.set_direction(fan::FanDirection::REVERSE);
-              call.perform();
-            } else if (id(endstop_bottom).state) {
-              // Door is at the bottom, move it up
-              auto call = id(dog_door).turn_on();
-              call.set_direction(fan::FanDirection::FORWARD);
-              call.perform();
+            if (id(dog_door).direction == fan::FanDirection::FORWARD) {
+              ESP_LOGD("toggle_button", "Reversing to close the door...");
+              id(close_door).execute();  // Call close_door script
             } else {
-              // Door is in the middle, toggle the direction
-              if (id(dog_door).direction == fan::FanDirection::FORWARD) {
-                auto call = id(dog_door).turn_on();
-                call.set_direction(fan::FanDirection::REVERSE);
-                call.perform();
-              } else {
-                auto call = id(dog_door).turn_on();
-                call.set_direction(fan::FanDirection::FORWARD);
-                call.perform();
-              }
+              ESP_LOGD("toggle_button", "Reversing to open the door...");
+              id(open_door).execute();  // Call open_door script
             }
 
-  # Endstop at the top
+# The physical micro switches being used as endstops.
   - platform: gpio
     id: endstop_top
     pin:
       number: ${endstop_top_pin}
       mode: INPUT_PULLUP
-      inverted: False
+      inverted: false
     on_press:
       then:
         - fan.turn_off: dog_door
-    on_release:
-      then:
-        - logger.log: "Endstop Top Released: No action taken"
 
-  # Endstop at the bottom
   - platform: gpio
     id: endstop_bottom
     pin:
       number: ${endstop_bottom_pin}
       mode: INPUT_PULLUP
-      inverted: False
+      inverted: false
     on_press:
       then:
         - fan.turn_off: dog_door
-    on_release:
-      then:
-        - logger.log: "Endstop bottom Released: No action taken"
