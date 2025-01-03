@@ -23,6 +23,10 @@ globals:
     type: bool
     restore_value: no
     initial_value: "false"
+  - id: door_state
+    type: std::string
+    restore_value: no
+    initial_value: '"Closed"'
 
 esphome:
   name: ${device}
@@ -33,6 +37,8 @@ esphome:
     then:
       - lambda: |-
           ESP_LOGD("boot", "Free heap: %d", ESP.getFreeHeap());
+      - delay: 2s
+      - script.execute: open_door  # Run open_door script on boot
 
 <<: !include common/wifi.yaml
 <<: !include common/api.yaml
@@ -43,6 +49,13 @@ esphome:
 
 light:
   - !include common/light/led_status.yaml
+
+text_sensor:
+  - platform: template
+    id: door_state_sensor  # Add an ID for manual updates
+    name: "Door State"
+    lambda: |-
+      return {std::string(id(door_state))};
 
 script:
   # Set Blocked/Unblocked
@@ -85,9 +98,13 @@ script:
             return;
           }
           ESP_LOGD("open_door", "Opening the door...");
+          id(door_state) = "Opening";  // Set door state to "Opening"
           auto call = id(dog_door).turn_on();
           call.set_direction(fan::FanDirection::FORWARD);
           call.perform();
+      - text_sensor.template.publish:
+          id: door_state_sensor
+          state: !lambda 'return id(door_state).c_str();'  # Dynamically publish the current value
 
   # Close Door
   - id: close_door
@@ -98,9 +115,13 @@ script:
             return;
           }
           ESP_LOGD("close_door", "Closing the door...");
+          id(door_state) = "Closing";  // Set door state to "Closing"
           auto call = id(dog_door).turn_on();
           call.set_direction(fan::FanDirection::REVERSE);
           call.perform();
+      - text_sensor.template.publish:
+          id: door_state_sensor
+          state: !lambda 'return id(door_state).c_str();'  # Dynamically publish the current value
 
 switch:
   - !include common/switch/restart.yaml
@@ -138,7 +159,7 @@ sensor:
   - platform: adc
     pin: A0
     name: "Photodiode Sensor"
-    update_interval: 1s
+    update_interval: 5s
     filters:
       - multiply: 3.3
     on_value:
@@ -147,10 +168,14 @@ sensor:
             condition:
               lambda: "return x < 2.00;"  # Threshold for block detection
             then:
-              - script.execute:
-                  id: set_blocked
-                  state: true
-              - script.execute: open_door  # Open door immediately if blocked
+              - if:
+                  condition:
+                    lambda: "return x < 2.00 && !id(endstop_top).state;"  # Check block and top endstop
+                  then:
+                    - script.execute:
+                        id: set_blocked
+                        state: true
+                    - script.execute: open_door  # Open door only if not already at the top
             else:
               - script.execute:
                   id: set_blocked
@@ -174,7 +199,7 @@ fan:
     on_speed_set:
       then:
         - lambda: |-
-            auto speed = id(dog_door).state;  // Get the current speed
+            auto speed = id(dog_door).speed;  // Get the current speed
             if (speed == 0.33f) {
               ESP_LOGD("fan", "Speed set to LOW (33%)");
               // Logic for LOW speed (e.g., adjust PWM externally if needed)
@@ -186,14 +211,15 @@ fan:
               // Logic for HIGH speed
             }
 
-# This is physical button
 binary_sensor:
   - platform: gpio
     id: toggle_button
+    name: "Physical Button"
     pin:
       number: ${button_pin}
       mode: INPUT_PULLUP
       inverted: true
+    device_class: opening  # Optional: Adds a door-like icon in HA   
     on_press:
       then:
         - lambda: |-
@@ -206,22 +232,57 @@ binary_sensor:
             }
 
 # The physical micro switches being used as endstops.
+# Doing using lambda since UI will display state inverted, eg ON would mean OPEN
   - platform: gpio
     id: endstop_top
+    name: "Top Endstop"
     pin:
       number: ${endstop_top_pin}
       mode: INPUT_PULLUP
-      inverted: false
-    on_press:
+      inverted: false  # Keep this false to align UI states with physical behavior
+    device_class: opening
+    on_state:
       then:
-        - fan.turn_off: dog_door
+        - if:
+            condition:
+              lambda: "return !id(endstop_top).state;"
+            then:
+              - logger.log: "Top endstop pressed (Closed)"
+              - lambda: id(door_state) = std::string("Closed");
+              - fan.turn_off: dog_door
+            else:
+              - logger.log: "Top endstop released (Open)"
+              - lambda: |-
+                  if (!id(endstop_bottom).state) {
+                    id(door_state) = "Closing";
+                  }
+        - text_sensor.template.publish:
+            id: door_state_sensor
+            state: !lambda 'return id(door_state).c_str();'  # Dynamically publish the current value
 
   - platform: gpio
     id: endstop_bottom
+    name: "Bottom Endstop"
     pin:
       number: ${endstop_bottom_pin}
       mode: INPUT_PULLUP
       inverted: false
-    on_press:
+    device_class: opening
+    on_state:
       then:
-        - fan.turn_off: dog_door
+        - if:
+            condition:
+              lambda: "return !id(endstop_bottom).state;"
+            then:
+              - logger.log: "Bottom endstop pressed (Closed)"
+              - lambda: id(door_state) = std::string("Closed");
+              - fan.turn_off: dog_door
+            else:
+              - logger.log: "Bottom endstop released (Open)"
+              - lambda: |-
+                  if (!id(endstop_top).state) {
+                    id(door_state) = "Opening";
+                  }
+        - text_sensor.template.publish:
+            id: door_state_sensor
+            state: !lambda 'return id(door_state).c_str();'  # Dynamically publish the current value
