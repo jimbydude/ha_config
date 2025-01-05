@@ -3,7 +3,7 @@ strobe:
   name: Ring Doorbell
   colors:
     - state: True
-      brightness: 100%
+      brightness: ${sub_led_max_brightness_level1}
       red: 100%
       green: 100%
       blue: 100%

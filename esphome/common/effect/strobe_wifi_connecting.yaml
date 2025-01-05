@@ -3,7 +3,7 @@ strobe:
   name: Wifi Connecting
   colors:
     - state: True
-      brightness: 50%
+      brightness: ${sub_led_max_brightness_level1}
       red: 30%
       green: 30%
       blue: 0%

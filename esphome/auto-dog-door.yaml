@@ -5,21 +5,27 @@ substitutions:
   motor_forward_pin: GPIO4
   motor_reverse_pin: GPIO5
   button_pin: GPIO14
-  endstop_top_pin: GPIO12
-  endstop_bottom_pin: GPIO13
+  pin_endstop_1: GPIO12
+  pin_endstop_2: GPIO13
+  ir_sensor_pin: GPIO0
   reboot_timeout: 1h
   update_interval: 10min
   update_interval_memory_usage: 5s
   update_interval_wifi_status: 1min
   update_interval_short: 10s
   logger_baud_rate: "115200"
+  # LED Values
+  sub_led_max_brightness_level1: '0.3'
 
+#################################################################
+# Globals Sections
+#################################################################
 globals:
-  - id: is_blocked
+  - id: is_path_blocked
     type: bool
     restore_value: no
     initial_value: "false"
-  - id: is_locked
+  - id: is_door_locked
     type: bool
     restore_value: no
     initial_value: "false"
@@ -27,7 +33,16 @@ globals:
     type: std::string
     restore_value: no
     initial_value: '"Closed"'
+  # Allow the endstops to be flipped incase we need to isntall upside down.
+  - id: endstop_flipped
+    type: bool
+    restore_value: yes
+    initial_value: "false"  # Default: Not flipped
+# END GLOBALS
 
+#################################################################
+# Device configuration and boot parameters
+#################################################################
 esphome:
   name: ${device}
   platform: ESP8266
@@ -39,36 +54,78 @@ esphome:
           ESP_LOGD("boot", "Free heap: %d", ESP.getFreeHeap());
       - delay: 2s
       - script.execute: open_door  # Run open_door script on boot
+# END Device configuration
 
+#################################################################
+# Common snippets for most devices to monitor and manage
+#################################################################
 <<: !include common/wifi.yaml
 <<: !include common/api.yaml
 <<: !include common/ota.yaml
 <<: !include common/logger.yaml
 <<: !include common/text_sensors.yaml
 <<: !include common/binary_sensors.yaml
+# END Common
 
+#################################################################
+# GRB WS2812B LED lights. PIN D5
+#################################################################
 light:
-  - !include common/light/led_status.yaml
+  - platform: neopixelbus
+    id: led_strip
+    type: GRB
+    variant: WS2812X
+    pin: GPIO3
+    num_leds: 3
+    name: "NeoPixel Light"
 
+# Status LED
+  - platform: partition
+    name: "led0"
+    id: status_led
+    effects:
+      - !include common/effect/strobe_wifi_connecting.yaml
+      - !include common/effect/strobe_danger.yaml
+    segments:
+      - id: led_strip
+        from: 0
+        to: 0  
+# END GRB WS2812 LED Lights
+
+#################################################################
+# Check Wifi Connection
+#################################################################
+interval:
+  - !include common/wifi_connection_status.yaml
+# END Check Wifi Connection
+
+#################################################################
+# SECTION: Text Sensor
+#################################################################
 text_sensor:
   - platform: template
     id: door_state_sensor  # Add an ID for manual updates
     name: "Door State"
     lambda: |-
       return {std::string(id(door_state))};
+# END SECTION: Text Sensor
 
+
+#################################################################
+# SECTION: Scripts
+#################################################################
 script:
   # Set Blocked/Unblocked
-  - id: set_blocked
+  - id: set_path_blocked
     parameters:
       state: bool
     then:
       - lambda: |-
-          id(is_blocked) = state;
+          id(is_path_blocked) = state;
           if (state) {
-            ESP_LOGD("set_blocked", "Path is BLOCKED.");
+            ESP_LOGD("set_path_blocked", "Obstacle Detected. Patch BLOCKED.");
           } else {
-            ESP_LOGD("set_blocked", "Path is UNBLOCKED.");
+            ESP_LOGD("set_path_blocked", "Path is UNBLOCKED.");
           }
       - if:
           condition:
@@ -77,110 +134,176 @@ script:
             - script.execute: open_door
 
   # Lock/Unlock Door
-  - id: set_locked
+  - id: set_door_locked
     parameters:
       state: bool
     then:
       - lambda: |-
-          id(is_locked) = state;
+          id(is_door_locked) = state;
           if (state) {
-            ESP_LOGD("set_locked", "Door is BLOCKED.");
+            ESP_LOGD("set_door_locked", "Door is BLOCKED.");
           } else {
-            ESP_LOGD("set_locked", "Door is UNLOCKED.");
+            ESP_LOGD("set_door_locked", "Door is UNLOCKED.");
           }
 
-  # Open Door
+  - id: move_door
+    parameters:
+      action: string  # Either "open" or "close"
+    then:
+      - lambda: |-
+          if (id(is_door_locked)) {
+            ESP_LOGD("move_door", "System is LOCKED! Cannot move the door.");
+            return;
+          }
+
+          // Determine the motor direction and endstop based on action and flipped state
+          bool endstop_pressed;
+          fan::FanDirection direction;
+
+          if (action == "open") {
+            direction = id(endstop_flipped) ? fan::FanDirection::FORWARD : fan::FanDirection::REVERSE;
+            endstop_pressed = id(endstop_flipped) ? !id(endstop_2).state : !id(endstop_1).state;
+          } else if (action == "close") {
+            direction = id(endstop_flipped) ? fan::FanDirection::REVERSE : fan::FanDirection::FORWARD;
+            endstop_pressed = id(endstop_flipped) ? !id(endstop_1).state : !id(endstop_2).state;
+          } else {
+            ESP_LOGD("move_door", "Invalid action parameter: %s", action.c_str());
+            return;
+          }
+
+          ESP_LOGD("move_door", "Action: %s, Endstop flipped: %s, Endstop state: %s",
+              action.c_str(),
+              id(endstop_flipped) ? "true" : "false",
+              endstop_pressed ? "PRESSED" : "RELEASED");
+
+          // Stop if the corresponding endstop is pressed
+          if (endstop_pressed) {
+            ESP_LOGD("move_door", "Endstop is pressed. Stopping the door.");
+            return;
+          }
+
+          // Move the door in the determined direction
+          ESP_LOGD("move_door", "Moving door %s.", action.c_str());
+          id(door_state) = action == "open" ? "Opening" : "Closing";
+
+          auto call = id(dog_door).turn_on();
+          call.set_direction(direction);
+          call.perform();
+      - text_sensor.template.publish:
+          id: door_state_sensor
+          state: !lambda 'return id(door_state).c_str();'
+
   - id: open_door
     then:
-      - lambda: |-
-          if (id(is_locked)) {
-            ESP_LOGD("open_door", "System is LOCKED! Cannot open.");
-            return;
-          }
-          ESP_LOGD("open_door", "Opening the door...");
-          id(door_state) = "Opening";  // Set door state to "Opening"
-          auto call = id(dog_door).turn_on();
-          call.set_direction(fan::FanDirection::FORWARD);
-          call.perform();
-      - text_sensor.template.publish:
-          id: door_state_sensor
-          state: !lambda 'return id(door_state).c_str();'  # Dynamically publish the current value
+      - script.execute:
+          id: move_door
+          action: "open"
 
-  # Close Door
   - id: close_door
     then:
-      - lambda: |-
-          if (id(is_locked)) {
-            ESP_LOGD("close_door", "System is LOCKED! Cannot close.");
-            return;
-          }
-          ESP_LOGD("close_door", "Closing the door...");
-          id(door_state) = "Closing";  // Set door state to "Closing"
-          auto call = id(dog_door).turn_on();
-          call.set_direction(fan::FanDirection::REVERSE);
-          call.perform();
-      - text_sensor.template.publish:
-          id: door_state_sensor
-          state: !lambda 'return id(door_state).c_str();'  # Dynamically publish the current value
+      - script.execute:
+          id: move_door
+          action: "close"
 
+  - id: toggle_door_direction
+    then:
+      - lambda: |-
+          // Log initial direction
+          ESP_LOGD("toggle_direction", "Initial direction: %s",
+          id(dog_door).direction == fan::FanDirection::FORWARD ? "FORWARD" : "REVERSE");
+
+          // Determine the actual direction based on the flipped flag
+          bool is_forward = id(dog_door).direction == fan::FanDirection::REVERSE;
+          if (id(endstop_flipped)) {
+            is_forward = !is_forward;  // Flip the meaning of forward and reverse
+            ESP_LOGD("toggle_direction", "Direction flipped: %s", is_forward ? "FORWARD" : "REVERSE");
+          }
+
+          if (is_forward) {
+            ESP_LOGD("toggle_direction", "Reversing to close the door...");
+            id(close_door).execute();  // Call close_door script
+          } else {
+            ESP_LOGD("toggle_direction", "Reversing to open the door...");
+            id(open_door).execute();  // Call open_door script
+          }
+
+# END SECTION: Scripts
+
+#################################################################
+# SECTION: Switch Components
+#################################################################
 switch:
   - !include common/switch/restart.yaml
 
   - platform: template
     name: "Lock Dog Door"
     lambda: |-
-      return id(is_locked);
+      return id(is_door_locked);
     turn_on_action:
       - script.execute:
-          id: set_locked
+          id: set_door_locked
           state: true
     turn_off_action:
       - script.execute:
-          id: set_locked
+          id: set_door_locked
           state: false
+# END SECTION: Switch Components
 
+#################################################################
+# SECTION: Button Components (UI)
+#################################################################
 button:
   - platform: template
     name: "Reverse Dog Door Direction"
     on_press:
       then:
-        - lambda: |-
-            if (id(dog_door).direction == fan::FanDirection::FORWARD) {
-              ESP_LOGD("reverse_button", "Reversing to close the door...");
-              id(close_door).execute();  // Call the close_door script
-            } else {
-              ESP_LOGD("reverse_button", "Reversing to open the door...");
-              id(open_door).execute();  // Call the open_door script
-            }
+        - script.execute: toggle_door_direction  # Call the shared script
 
+  - platform: template
+    name: "Flip Endstops"
+    on_press:
+      then:
+        - lambda: |-
+            id(endstop_flipped) = !id(endstop_flipped);  // Toggle the flipped state
+            ESP_LOGD("flip", "Endstops flipped: %s", id(endstop_flipped) ? "true" : "false");
+# END SECTION: Button Components
+
+#################################################################
+# SECTION: Sensor Components
+#################################################################
 sensor:
   - !include common/sensor/uptime.yaml
+  - !include common/sensor/wifi-signal.yaml
 
-  - platform: adc
-    pin: A0
-    name: "Photodiode Sensor"
-    update_interval: 5s
-    filters:
-      - multiply: 3.3
-    on_value:
-      then:
-        - if:
-            condition:
-              lambda: "return x < 2.00;"  # Threshold for block detection
-            then:
-              - if:
-                  condition:
-                    lambda: "return x < 2.00 && !id(endstop_top).state;"  # Check block and top endstop
-                  then:
-                    - script.execute:
-                        id: set_blocked
-                        state: true
-                    - script.execute: open_door  # Open door only if not already at the top
-            else:
-              - script.execute:
-                  id: set_blocked
-                  state: false
+#   - platform: adc
+#     pin: A0
+#     name: "Photodiode Sensor"
+#     update_interval: 5s
+#     filters:
+#       - multiply: 3.3
+#     on_value:
+#       then:
+#         - if:
+#             condition:
+#               lambda: "return x < 2.00;"  # Threshold for block detection
+#             then:
+#               - if:
+#                   condition:
+#                     lambda: "return x < 2.00 && !id(endstop_1).state;"  # Check block and top endstop
+#                   then:
+#                     - script.execute:
+#                         id: set_path_blocked
+#                         state: true
+#                     - script.execute: open_door  # Open door only if not already at the top
+#             else:
+#               - script.execute:
+#                   id: set_path_blocked
+#                   state: false
+# END SECTION: Sensor Components
 
+#################################################################
+# SECTION: Device Pin Output Mapping
+#################################################################
 output:
   - platform: esp8266_pwm
     id: motor_forward_pin
@@ -188,7 +311,11 @@ output:
   - platform: esp8266_pwm
     id: motor_reverse_pin
     pin: ${motor_reverse_pin}
+# END SECTION: Device Pin Output Mapping
 
+#################################################################
+# SECTION: H-Bridge Fan Component
+#################################################################
 fan:
   - platform: hbridge
     id: dog_door
@@ -210,7 +337,11 @@ fan:
               ESP_LOGD("fan", "Speed set to HIGH (100%)");
               // Logic for HIGH speed
             }
+# END SECTION: H-Bridge Fan Component
 
+#################################################################
+# SECTION: Binary Sensor Components. (Physical)
+#################################################################
 binary_sensor:
   - platform: gpio
     id: toggle_button
@@ -218,26 +349,21 @@ binary_sensor:
     pin:
       number: ${button_pin}
       mode: INPUT_PULLUP
-      inverted: true
+      inverted: false
     device_class: opening  # Optional: Adds a door-like icon in HA   
     on_press:
       then:
-        - lambda: |-
-            if (id(dog_door).direction == fan::FanDirection::FORWARD) {
-              ESP_LOGD("toggle_button", "Reversing to close the door...");
-              id(close_door).execute();  // Call close_door script
-            } else {
-              ESP_LOGD("toggle_button", "Reversing to open the door...");
-              id(open_door).execute();  // Call open_door script
-            }
+        - script.execute: toggle_door_direction  # Call the shared script
 
-# The physical micro switches being used as endstops.
-# Doing using lambda since UI will display state inverted, eg ON would mean OPEN
+  # The physical micro switches being used as endstops.
+  # Doing using lambda since UI will display state inverted, eg ON would mean OPEN
+
+  # ENDSTOP 1
   - platform: gpio
-    id: endstop_top
-    name: "Top Endstop"
+    id: endstop_1
+    name: "Endstop 1"
     pin:
-      number: ${endstop_top_pin}
+      number: ${pin_endstop_1}
       mode: INPUT_PULLUP
       inverted: false  # Keep this false to align UI states with physical behavior
     device_class: opening
@@ -245,26 +371,27 @@ binary_sensor:
       then:
         - if:
             condition:
-              lambda: "return !id(endstop_top).state;"
+              lambda: "return !id(endstop_1).state;"
             then:
-              - logger.log: "Top endstop pressed (Closed)"
-              - lambda: id(door_state) = std::string("Closed");
+              - logger.log: "Endstop 1 pressed"
+              - lambda: id(door_state) = std::string("----");
               - fan.turn_off: dog_door
             else:
-              - logger.log: "Top endstop released (Open)"
+              - logger.log: "Endstop 1 released (----)"
               - lambda: |-
-                  if (!id(endstop_bottom).state) {
-                    id(door_state) = "Closing";
+                  if (!id(endstop_2).state) {
+                    id(door_state) = "----";
                   }
         - text_sensor.template.publish:
             id: door_state_sensor
             state: !lambda 'return id(door_state).c_str();'  # Dynamically publish the current value
 
+  # ENDSTOP 2
   - platform: gpio
-    id: endstop_bottom
-    name: "Bottom Endstop"
+    id: endstop_2
+    name: "Endstop 2"
     pin:
-      number: ${endstop_bottom_pin}
+      number: ${pin_endstop_2}
       mode: INPUT_PULLUP
       inverted: false
     device_class: opening
@@ -272,17 +399,44 @@ binary_sensor:
       then:
         - if:
             condition:
-              lambda: "return !id(endstop_bottom).state;"
+              lambda: "return !id(endstop_2).state;"
             then:
-              - logger.log: "Bottom endstop pressed (Closed)"
-              - lambda: id(door_state) = std::string("Closed");
+              - logger.log: "Endstop 2 pressed (----)"
+              - lambda: id(door_state) = std::string("----");
               - fan.turn_off: dog_door
             else:
-              - logger.log: "Bottom endstop released (Open)"
+              - logger.log: "Endstop 2 released (----)"
               - lambda: |-
-                  if (!id(endstop_top).state) {
-                    id(door_state) = "Opening";
+                  if (!id(endstop_1).state) {
+                    id(door_state) = "----";
                   }
         - text_sensor.template.publish:
             id: door_state_sensor
             state: !lambda 'return id(door_state).c_str();'  # Dynamically publish the current value
+
+  # IR Sensor - Back off when object detected.
+  - platform: gpio
+    id: ir_sensor
+    name: "IR Sensor"
+    pin:
+      number: ${ir_sensor_pin}
+      mode: INPUT_PULLUP
+      inverted: true  # Use inverted logic if the sensor outputs LOW when an object is detected
+    device_class: motion  
+    on_state:
+      then:
+        - if:
+            condition:
+              lambda: "return id(ir_sensor).state;"  # Check IR and top endstop
+            then:
+              - logger.log: "Safety Sensor Detected Object."
+              - script.execute:
+                  id: set_path_blocked
+                  state: true
+              - script.execute: open_door  # Open door only if not already at the top
+            else:
+              - logger.log: "Safety Sensor Cleared."
+              - script.execute:
+                  id: set_path_blocked
+                  state: false
+# END SECTION: Binary Sensor Components. (Physical)

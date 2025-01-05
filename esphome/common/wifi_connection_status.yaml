@@ -10,14 +10,16 @@ then:
     then:
       - light.turn_on:
           effect: none
+          brightness: ${sub_led_max_brightness_level1}
           id: status_led
           red: !lambda |- 
-              return (100-std::abs( id(${device}_wifi_signal).state ))/100.0;
+            return (100-std::abs( id(${device}_wifi_signal).state ))/100.0;
           green: 0%
           blue: !lambda |-
-              return std::abs( id(${device}_wifi_signal).state )/100.0;
+            return std::abs( id(${device}_wifi_signal).state )/100.0;
     else:
       # - logger.log: "Lost Wifi Connection. Strobe the status led"
       - light.turn_on:
+          brightness: ${sub_led_max_brightness_level1}
           id: status_led
           effect: Wifi Connecting
