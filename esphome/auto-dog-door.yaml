@@ -68,6 +68,59 @@ esphome:
 # END Common
 
 #################################################################
+# Check Wifi Connection
+#################################################################
+interval:
+  - !include common/wifi_connection_status.yaml
+
+# Scehdular interval check
+  - interval: 1min
+    then:
+      - lambda: |-
+          auto now = id(sntp_time).now();
+
+          // Check if current time matches the open time
+          if (now.hour == id(open_time).hour && now.minute == id(open_time).minute) {
+            ESP_LOGD("schedule", "Triggering open_door at %02d:%02d", now.hour, now.minute);
+            id(open_door).execute();
+          }
+
+          // Check if current time matches the close time
+          if (now.hour == id(close_time).hour && now.minute == id(close_time).minute) {
+            ESP_LOGD("schedule", "Triggering close_door at %02d:%02d", now.hour, now.minute);
+            id(close_door).execute();
+          }
+
+
+# END Check Wifi Connection
+
+
+#################################################################
+# SECTION: Scheduler
+#################################################################
+time:
+  - platform: sntp
+    id: sntp_time
+    timezone: "America/Los_Angeles"  # Set your local timezone
+
+datetime:
+  - platform: template
+    id: open_time
+    type: time
+    name: "Door Open Time"
+    optimistic: yes
+    restore_value: true
+
+  - platform: template
+    id: close_time
+    type: time
+    name: "Door Close Time"
+    optimistic: yes
+    restore_value: true
+# END SECTION: Scheduler
+
+
+#################################################################
 # GRB WS2812B LED lights. PIN D5
 #################################################################
 light:
@@ -92,12 +145,6 @@ light:
         to: 0  
 # END GRB WS2812 LED Lights
 
-#################################################################
-# Check Wifi Connection
-#################################################################
-interval:
-  - !include common/wifi_connection_status.yaml
-# END Check Wifi Connection
 
 #################################################################
 # SECTION: Text Sensor
@@ -115,6 +162,32 @@ text_sensor:
 # SECTION: Scripts
 #################################################################
 script:
+  - id: set_door_state
+    parameters:
+      endstop_id: int  # 1 for Endstop 1, 2 for Endstop 2
+      pressed: bool    # True if the endstop is pressed, false if released
+    then:
+      - if:
+          condition:
+            lambda: "return pressed;"  # Check if the endstop is pressed
+          then:
+            - lambda: |-
+                if (endstop_id == 1) {
+                  id(door_state) = id(endstop_flipped) ? std::string("CLOSED") : std::string("OPEN");
+                } else if (endstop_id == 2) {
+                  id(door_state) = id(endstop_flipped) ? std::string("OPEN") : std::string("CLOSED");
+                }
+          else:
+            - lambda: |-
+                if (endstop_id == 1) {
+                  id(door_state) = std::string("Closing");
+                } else if (endstop_id == 2) {
+                  id(door_state) = std::string("Opening");
+                }
+      - text_sensor.template.publish:
+          id: door_state_sensor
+          state: !lambda 'return id(door_state).c_str();'
+
   # Set Blocked/Unblocked
   - id: set_path_blocked
     parameters:
@@ -247,6 +320,21 @@ switch:
       - script.execute:
           id: set_door_locked
           state: false
+
+# Show wether or not we have flipped the controller.
+  - platform: template
+    name: "Flip Endstops"
+    lambda: |-
+      return id(endstop_flipped);  // Show the current state of endstop_flipped
+    turn_on_action:
+      - lambda: |-
+          id(endstop_flipped) = true;
+          ESP_LOGD("flip", "Endstops flipped: true");
+    turn_off_action:
+      - lambda: |-
+          id(endstop_flipped) = false;
+          ESP_LOGD("flip", "Endstops flipped: false");
+
 # END SECTION: Switch Components
 
 #################################################################
@@ -258,14 +346,6 @@ button:
     on_press:
       then:
         - script.execute: toggle_door_direction  # Call the shared script
-
-  - platform: template
-    name: "Flip Endstops"
-    on_press:
-      then:
-        - lambda: |-
-            id(endstop_flipped) = !id(endstop_flipped);  // Toggle the flipped state
-            ESP_LOGD("flip", "Endstops flipped: %s", id(endstop_flipped) ? "true" : "false");
 # END SECTION: Button Components
 
 #################################################################
@@ -274,31 +354,6 @@ button:
 sensor:
   - !include common/sensor/uptime.yaml
   - !include common/sensor/wifi-signal.yaml
-
-#   - platform: adc
-#     pin: A0
-#     name: "Photodiode Sensor"
-#     update_interval: 5s
-#     filters:
-#       - multiply: 3.3
-#     on_value:
-#       then:
-#         - if:
-#             condition:
-#               lambda: "return x < 2.00;"  # Threshold for block detection
-#             then:
-#               - if:
-#                   condition:
-#                     lambda: "return x < 2.00 && !id(endstop_1).state;"  # Check block and top endstop
-#                   then:
-#                     - script.execute:
-#                         id: set_path_blocked
-#                         state: true
-#                     - script.execute: open_door  # Open door only if not already at the top
-#             else:
-#               - script.execute:
-#                   id: set_path_blocked
-#                   state: false
 # END SECTION: Sensor Components
 
 #################################################################
@@ -374,17 +429,13 @@ binary_sensor:
               lambda: "return !id(endstop_1).state;"
             then:
               - logger.log: "Endstop 1 pressed"
-              - lambda: id(door_state) = std::string("----");
               - fan.turn_off: dog_door
+              - script.execute:
+                  id: set_door_state
+                  endstop_id: 1
+                  pressed: true
             else:
               - logger.log: "Endstop 1 released (----)"
-              - lambda: |-
-                  if (!id(endstop_2).state) {
-                    id(door_state) = "----";
-                  }
-        - text_sensor.template.publish:
-            id: door_state_sensor
-            state: !lambda 'return id(door_state).c_str();'  # Dynamically publish the current value
 
   # ENDSTOP 2
   - platform: gpio
@@ -402,17 +453,13 @@ binary_sensor:
               lambda: "return !id(endstop_2).state;"
             then:
               - logger.log: "Endstop 2 pressed (----)"
-              - lambda: id(door_state) = std::string("----");
               - fan.turn_off: dog_door
+              - script.execute:
+                  id: set_door_state
+                  endstop_id: 1
+                  pressed: true
             else:
               - logger.log: "Endstop 2 released (----)"
-              - lambda: |-
-                  if (!id(endstop_1).state) {
-                    id(door_state) = "----";
-                  }
-        - text_sensor.template.publish:
-            id: door_state_sensor
-            state: !lambda 'return id(door_state).c_str();'  # Dynamically publish the current value
 
   # IR Sensor - Back off when object detected.
   - platform: gpio

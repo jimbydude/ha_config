@@ -1,4 +1,3 @@
-
 # Configure a default setup of Home Assistant (frontend, api, etc)
 default_config:
 
@@ -15,7 +14,7 @@ scene: !include scenes.yaml
 aqualogic:
   host: 192.168.42.117
   port: 80
-  
+
 sensor:
   - platform: aqualogic
     monitored_conditions:
