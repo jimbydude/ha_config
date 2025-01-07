@@ -1,0 +1,12 @@
+---
+strobe:
+  name: Door Activation Prepare
+  colors:
+    - state: True
+      brightness: 80%
+      red: 20%
+      green: 60%
+      blue: 60%
+      duration: 500ms
+    - state: False
+      duration: 500ms

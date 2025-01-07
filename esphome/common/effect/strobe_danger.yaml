@@ -7,6 +7,6 @@ strobe:
       red: 100%
       green: 0%
       blue: 0%
-      duration: 500ms
+      duration: 300ms
     - state: False
-      duration: 500ms
+      duration: 300ms

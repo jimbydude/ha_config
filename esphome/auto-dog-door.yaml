@@ -27,8 +27,8 @@ globals:
     initial_value: "false"
   - id: is_door_locked
     type: bool
-    restore_value: no
-    initial_value: "false"
+    restore_value: yes
+    initial_value: "true"
   - id: door_state
     type: std::string
     restore_value: no
@@ -37,7 +37,6 @@ globals:
   - id: endstop_flipped
     type: bool
     restore_value: yes
-    initial_value: "false"  # Default: Not flipped
 # END GLOBALS
 
 #################################################################
@@ -52,6 +51,8 @@ esphome:
     then:
       - lambda: |-
           ESP_LOGD("boot", "Free heap: %d", ESP.getFreeHeap());
+      - script.execute:
+          id: disable_door_status_led_effect
       - delay: 2s
       - script.execute: open_door  # Run open_door script on boot
 # END Device configuration
@@ -110,6 +111,10 @@ datetime:
     name: "Door Open Time"
     optimistic: yes
     restore_value: true
+    initial_value:
+      hour: 8
+      minute: 0
+      second: 0
 
   - platform: template
     id: close_time
@@ -117,6 +122,10 @@ datetime:
     name: "Door Close Time"
     optimistic: yes
     restore_value: true
+    initial_value:
+      hour: 23
+      minute: 0
+      second: 0
 # END SECTION: Scheduler
 
 
@@ -132,17 +141,29 @@ light:
     num_leds: 3
     name: "NeoPixel Light"
 
-# Status LED
+# Device Status LED
   - platform: partition
     name: "led0"
     id: status_led
     effects:
       - !include common/effect/strobe_wifi_connecting.yaml
-      - !include common/effect/strobe_danger.yaml
     segments:
       - id: led_strip
         from: 0
         to: 0  
+# Door Status LED
+  - platform: partition
+    name: "Door Status LED"
+    id: door_status_led
+    effects:
+      - !include common/effect/strobe_danger.yaml
+      - !include common/effect/pulse_device_status_good.yaml
+      - !include common/effect/strobe_door_activation_prepare.yaml
+      - !include common/effect/strobe_door_activation_running.yaml
+    segments:
+      - id: led_strip
+        from: 1
+        to: 1
 # END GRB WS2812 LED Lights
 
 
@@ -162,6 +183,43 @@ text_sensor:
 # SECTION: Scripts
 #################################################################
 script:
+  - id: trigger_door_status_led_color_effect
+    parameters:
+      red: float  # Red component (0.0 to 1.0)
+      green: float  # Green component (0.0 to 1.0)
+      blue: float  # Blue component (0.0 to 1.0)
+      effect: string  # The pulse effect name to apply
+    then:
+      - lambda: |-
+          ESP_LOGI("trigger_door_status_led_color_effect", "Setting LED to RGB(%0.2f, %0.2f, %0.2f) with Effect: %s",
+                   red, green, blue, effect.c_str());
+          auto call = id(door_status_led).turn_on();
+          call.set_brightness(0.3); 
+          call.set_rgb(red, green, blue);  // Apply the RGB color
+          call.set_effect(effect.c_str());  // Apply the specified effect
+          call.perform();
+
+  # Script to turn on the LED with the specified effect
+  - id: trigger_door_status_led_effect
+    parameters:
+      effect: string  # The effect name to set
+    then:
+      - lambda: |-
+          ESP_LOGI("trigger_door_status_led_effect", "Turning on LED with Effect: %s", effect.c_str());
+          auto call = id(door_status_led).turn_on();
+          call.set_effect(effect.c_str());
+          call.perform();
+
+  # Script to turn off the LED
+  - id: disable_door_status_led_effect
+    then:
+      - lambda: |-
+          ESP_LOGI("disable_door_status_led_effect", "Turning off LED and resetting state.");
+          auto call = id(door_status_led).turn_off();
+          call.set_brightness(0.0);  // Clear brightness
+          call.set_rgb(0.0, 0.0, 0.0);  // Reset RGB to zero
+          call.perform();
+
   - id: set_door_state
     parameters:
       endstop_id: int  # 1 for Endstop 1, 2 for Endstop 2
@@ -228,6 +286,9 @@ script:
             ESP_LOGD("move_door", "System is LOCKED! Cannot move the door.");
             return;
           }
+
+          // Access the light entity using its ID
+          id(trigger_door_status_led_effect).execute("Door Activation Running");
 
           // Determine the motor direction and endstop based on action and flipped state
           bool endstop_pressed;
@@ -434,7 +495,13 @@ binary_sensor:
                   id: set_door_state
                   endstop_id: 1
                   pressed: true
-            else:
+              # Disable any status lights since we've reached an endstop
+              - script.execute:
+                  id: trigger_door_status_led_color_effect
+                  effect: "Device Status Good"
+                  red: 0.0
+                  green: 1.0
+                  blue: 0.0  # Green
               - logger.log: "Endstop 1 released (----)"
 
   # ENDSTOP 2
@@ -456,8 +523,15 @@ binary_sensor:
               - fan.turn_off: dog_door
               - script.execute:
                   id: set_door_state
-                  endstop_id: 1
+                  endstop_id: 2
                   pressed: true
+              # Disable any status lights since we've reached an endstop
+              - script.execute:
+                  id: trigger_door_status_led_color_effect
+                  effect: "Device Status Good"
+                  red: 0.0
+                  green: 1.0
+                  blue: 0.0  # Green
             else:
               - logger.log: "Endstop 2 released (----)"
 
@@ -468,21 +542,35 @@ binary_sensor:
     pin:
       number: ${ir_sensor_pin}
       mode: INPUT_PULLUP
-      inverted: true  # Use inverted logic if the sensor outputs LOW when an object is detected
-    device_class: motion  
+      inverted: true
+    device_class: motion
     on_state:
       then:
         - if:
             condition:
-              lambda: "return id(ir_sensor).state;"  # Check IR and top endstop
+              lambda: "return id(is_path_blocked);"
             then:
-              - logger.log: "Safety Sensor Detected Object."
+              # Already in danger mode, avoid repetitive actions
+              - delay: 2s
+              - logger.log: "Obstacle still detected after delay. Maintaining danger mode."
+            else:
+              # First-time obstacle detection
+              - logger.log: "Obstacle detected! Activating safety protocols."
               - script.execute:
                   id: set_path_blocked
                   state: true
-              - script.execute: open_door  # Open door only if not already at the top
-            else:
-              - logger.log: "Safety Sensor Cleared."
+              - script.execute: open_door
+              # Trigger warning light
+              - script.execute:
+                  id: trigger_door_status_led_effect
+                  effect: "Danger Will Robinson"
+    on_release:
+      then:
+        - if:
+            condition:
+              lambda: "return id(is_path_blocked);"
+            then:
+              - logger.log: "Obstacle cleared. Resetting safety protocols."
               - script.execute:
                   id: set_path_blocked
                   state: false

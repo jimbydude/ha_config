@@ -1,0 +1,12 @@
+#################################################################
+# SECTION: Effec to simply show door is idle. Steady Green for now
+#################################################################
+---
+pulse:
+    name: "Device Status Good"
+    transition_length:
+        on_length: 1s
+        off_length: 500ms
+    update_interval: 1.5s
+    min_brightness: 20%
+    max_brightness: 40%

@@ -1,0 +1,12 @@
+---
+strobe:
+  name: Door Activation Running
+  colors:
+    - state: True
+      brightness: 80%
+      red: 20%
+      green: 50%
+      blue: 50%
+      duration: 500ms
+    - state: False
+      duration: 500ms
