@@ -1,37 +1,328 @@
+substitutions:
+  device: esptemplatetest
+  name: ESP Template Test
+  led_status: GPIO2
+  reboot_timeout: 1h
+  update_interval: 10min
+  update_interval_memory_usage: 5s
+  update_interval_wifi_status: 10s
+  update_interval_short: 10s
+  logger_baud_rate: "115200"
+  # I2C
+  sliding_window: "5"
+  i2c_sda: D2
+  i2c_scl: D1
+  i2c_scan: 'True'
+  i2c_device: ads115_a
+  ads_address: '0x48'
+  adc_a0_pin: A0
+  adc_a0_multiplier: "4.2"
+  adc_a0_pin_name: "Battery (18650)"
+  adc_a0_icon: "mdi:battery"
+  adc_a0_accuracy_decimals: '1'
+  adc_a0_unit_of_measurement: "%"
+  dht_unit_of_measurement: "°F"
+  adc_gain: '2.048'
+  # LED Values
+  led_max_bright: '0.5'
+  sub_led_max_brightness_level1: '0.5'
+  led_strip_pin: D5
+  dht_pin: D7
+
+#################################################################
+# Globals Sections
+#################################################################
+globals:
+  - id: led_max_brightness
+    type: float
+    restore_value: no
+    initial_value: '0.5'
+
+# Lowest Percentage, below this and soil is too dry
+  - id: danger_threshold
+    type: int
+    restore_value: no
+    initial_value: '30'
+
+#################################################################
+# Device configuration and boot parameters
+#################################################################
 esphome:
-  name: 8266-template-device
-  friendly_name: 8266 Template Device
+  name: ${device}
+  on_boot:
+    priority: -10
+    then:
+      - lambda: |-
+          ESP_LOGD("boot", "Free heap: %d", ESP.getFreeHeap());
 
 esp8266:
   board: d1_mini
+# END Device configuration
 
-# Enable logging
-logger:
+#################################################################
+# Common snippets for most devices to monitor and manage
+#################################################################
+<<: !include common/wifi.yaml
+<<: !include common/api.yaml
+<<: !include common/ota.yaml
+<<: !include common/logger.yaml
+<<: !include common/text_sensors.yaml
+<<: !include common/binary_sensors.yaml
+# END Common
 
-# Enable Home Assistant API
-api:
-  encryption:
-    key: "tLS2euWdvTGDw7j3mnWhTiTEP2l/OWxO3gUudrnMDOY="
+#################################################################
+# I2C Iniitalisation
+#################################################################
+<<: !include common/i2c.yaml
+<<: !include common/analog_sensor/ads1115.yaml
 
-ota:
-  - platform: esphome
-    password: "5bb6f7bdbab8fcb6d62e9247afafb99a"
 
-wifi:
-  ssid: !secret wifi_ssid
-  password: !secret wifi_password
+#################################################################
+# Check Wifi Connection
+#################################################################
+interval:
+  - !include common/wifi_connection_status.yaml
 
-  # Enable fallback hotspot (captive portal) in case wifi connection fails
-  ap:
-    ssid: "8266-Template-Device"
-    password: "URVh5BFh5nfR"
+# Scehdular interval check
+  #- interval: 1min
+  #  then:
+  #    - lambda: |-
+  #        auto now = id(sntp_time).now();
+  # - interval: 5s
+  #   then:
+  #     - component.update: oled_display
+# END Check Wifi Connection
 
-captive_portal:
+#################################################################
+# SECTION: Scheduler
+#################################################################
+time:
+  - platform: sntp
+    id: sntp_time
+    timezone: "America/Los_Angeles"  # Set your local timezone
 
-# Example configuration entry
+#################################################################
+# SECTION: Sensor Components
+#################################################################
+sensor:
+  - !include common/sensor/uptime.yaml
+  - !include common/sensor/wifi-signal.yaml
+  - !include common/sensor/dht11.yaml
+
+  ################################################################
+  # ADS1115 Analog multiplexer.
+  ################################################################
+  # Virtual A0
+  - !include common/analog_sensor/ads1115_a0_moisture.yaml
+#  - !include common/analog_sensor/ads1115_a1_moisture.yaml
+#  - !include common/analog_sensor/ads1115_a2_moisture.yaml
+#  - !include common/analog_sensor/ads1115_a3_moisture.yaml
+  ### END OF ADS115 BLOCK
+# END SECTION: Sensor Components
+
+#################################################################
+# SECTION: Device Pin Output Mapping
+#################################################################
+# output:
+#   - platform: esp8266_pwm
+#     id: motor_forward_pin
+#     pin: ${motor_forward_pin}
+#   - platform: esp8266_pwm
+#     id: motor_reverse_pin
+#     pin: ${motor_reverse_pin}
+# END SECTION: Device Pin Output Mapping
+
+#################################################################
+# SECTION: Button Components (UI)
+#################################################################
+# button:
+#   - platform: template
+#     name: "Reverse Dog Door Direction"
+#     on_press:
+#       then:
+#         - script.execute: toggle_door_direction  # Call the shared script
+# END SECTION: Button Components
+
+#################################################################
+# SECTION: Binary Sensor Components. (Physical)
+#################################################################
+# binary_sensor:
+#   - platform: gpio
+#     id: toggle_button
+#     name: "Physical Button"
+#     pin:
+#       number: ${button_pin}
+#       mode: INPUT_PULLUP
+#       inverted: false
+#     device_class: opening  # Optional: Adds a door-like icon in HA   
+#     on_press:
+#       then:
+#         - script.execute: toggle_door_direction  # Call the shared script
+
+#################################################################
+# SECTION: Switch Components
+#################################################################
+switch:
+  - !include common/switch/restart.yaml
+
+  # - platform: template
+  #   name: "Lock Dog Door"
+  #   lambda: |-
+  #     return id(is_door_locked);
+  #   turn_on_action:
+  #     - script.execute:
+  #         id: set_door_locked
+  #         state: true
+  #   turn_off_action:
+  #     - script.execute:
+  #         id: set_door_locked
+  #         state: false
+
+#################################################################
+# GRB WS2812B LED lights. PIN D5
+#################################################################
 light:
-  - platform: status_led
-    name: "Switch state"
-    pin:
-      number: GPIO2
-      inverted: true
+  - platform: neopixelbus
+    id: led_strip
+    type: GRB
+    variant: WS2812X
+    pin: ${led_strip_pin}
+    num_leds: 4
+    name: "NeoPixel Light Strip"
+
+# Soil Sensor on AD1115 A0-GND
+  - platform: partition
+    name: "1st LED"
+    id: va0_status_led
+    effects:
+      - !include common/effect/strobe_danger.yaml
+    segments:
+      - id: led_strip
+        from: 0
+        to: 0
+# Device Status LED
+  - platform: partition
+    name: "4th LED: Status LED (WIFI)"
+    id: status_led
+    effects:
+      - !include common/effect/strobe_wifi_connecting.yaml
+    segments:
+      - id: led_strip
+        from: 3
+        to: 3
+# END GRB WS2812 LED Lights
+
+ #################################################################
+# List of fonts we are using for the OLED Display.
+#################################################################
+font:
+  - file: 'ttf/arial.ttf'
+    id: font_arial_small
+    size: 10
+  # - file: 'ttf/arial.ttf'
+  #   id: font_arial_medium
+  #   size: 14
+  # - file: 'ttf/arial.ttf'
+  #   id: font_arial_large
+  #   size: 20
+  # - file: 'ttf/times.ttf'
+  #   id: font_times
+  #   size: 16
+
+# Setup Display to show sensor reading in real time.
+display:
+  - platform: ssd1306_i2c
+    model: "SSD1306 128x64"
+    reset_pin: D0
+    address: 0x3C
+    id: oled_display
+    
+    lambda: |-
+      // Constants and variables
+      static bool NEW_LINE = true;
+      static bool NO_NEW_LINE = false;
+
+      static int screen_height = 64;  // OLED Display 128x64
+      static int screen_width = 128;
+      static int separator_height = 2; // Line thickness
+      int line_y = 0; // Tracks the current Y position dynamically
+
+      /* ********************************
+       * Local helper methods for display
+       * *******************************
+       */
+
+      // Ensure Y stays within screen bounds
+      auto clip_y = [&](int y, int height) {
+          return (y + height <= screen_height) ? y : (screen_height - height);
+      };
+
+      // Generic function to draw either a text line or a separator line (clipped)
+      auto draw_element = [&](int x, auto font, bool new_line, const char *text = nullptr, auto... args) {
+          int font_height = font->get_height();
+          int clipped_y = clip_y(line_y, font_height);
+
+          if (text) {
+              if (clipped_y >= 0) {
+                  it.printf(x, clipped_y, font, text, args...); // Print only if within bounds
+              }
+              if (new_line) {
+                  line_y += font_height; // Move down only if it's a new line
+              }
+          } else {
+              if (clipped_y >= 0) {
+                  it.line(x, clipped_y, screen_width, clipped_y); // Draw separator line
+              }
+              line_y += separator_height; // Only add a few pixels (not full font height)
+          }
+      };
+
+      // Method to force a new line based on the last used font height
+      auto new_line = [&](auto font) {
+          line_y += font->get_height(); // Move down by font height
+      };
+
+      /* *********************************************************************
+       * Build display output from here
+       * *********************************************************************
+       */
+
+      // Display Header - TITLE + TIME
+      draw_element(0, id(font_arial_small), NO_NEW_LINE, "ESP8266 Device");
+      draw_element(60, id(font_arial_small), NEW_LINE, "Wifi: %2.0fdb", id(${device}_wifi_signal).state);
+      draw_element(0, id(font_arial_small), NEW_LINE);  // Line Separator
+
+      // Display Wifi, Temperature, and Humidity **ON THE SAME LINE**
+      //draw_element(0, id(font_arial_small), NO_NEW_LINE, "WiFi: %s", id(${device}_wifi_ssid).state.c_str());
+      draw_element(0, id(font_arial_small), NEW_LINE, "IP: %s", id(${device}_ip).state.c_str());
+      draw_element(0, id(font_arial_small), NEW_LINE, "SSID: %s", id(${device}_ssid).state.c_str());
+
+      //new_line(id(font_arial_small));  // Move down before drawing separator      
+      draw_element(0, id(font_arial_small), NEW_LINE);  // Another Separator Line
+
+      // Display time
+      it.strftime(0, 64-21, id(font_arial_small), "%Y-%m-%d %H:%M:%S", id(sntp_time).now());
+
+      // Display Temp/hum
+      new_line(id(font_arial_small));  // Move down before drawing separator      
+      draw_element(56, id(font_arial_small), NO_NEW_LINE, "T: %2.0f°F", id(${device}_dht11_temp).state * (9.0/5.0) + 32.0);
+      draw_element(91, id(font_arial_small), NO_NEW_LINE, "H:%2.0f%%", id(${device}_dht11_hum).state);
+
+
+      // // Badge Display calculations
+      // int badge_center = screen_width / (5 * 2);
+      // int badge_width = badge_center * 2;
+      // int badge_radius = badge_center - 2;
+      // int badge_y_offset = clip_y(53, badge_radius * 2); // Clip to prevent overflow
+      // int badge_name_pos = badge_y_offset - badge_radius - 6;
+
+      // // Use array to draw sensor badges
+      // std::vector<float> sensor_values = {id(${device}_va0).state}; // Expand as needed
+      // for (int i = 0; i < sensor_values.size(); ++i) {
+      //     int x_pos = badge_center + (badge_width * i);
+      //     if (badge_y_offset >= 0) {
+      //         it.circle(x_pos, badge_y_offset, badge_radius); // Draw only if visible
+      //     }
+      //     draw_element(x_pos, id(font_arial_small), "S%d", i + 1);
+      //     draw_element(x_pos, id(font_arial_small), "%2.0f", sensor_values[i]);
+      // }

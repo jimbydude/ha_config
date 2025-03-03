@@ -2,7 +2,19 @@
 platform: wifi_info
 ip_address:
   name: ${name} IP Address
+  icon: "mdi:ip-outline"
+  id: ${device}_ip
 ssid:
   name: ${name} SSID
+  icon: "mdi:wifi-settings"
+  id: ${device}_ssid
 bssid:
-  name: ${name} BSSID  
+  name: ${name} BSSID
+  icon: "mdi:wifi-settings"
+mac_address:
+  name: "${name}: MAC"
+  icon: "mdi:network-outline"
+scan_results:
+  name: "${name}: Wifi Scan"
+  icon: "mdi:wifi-refresh"
+  disabled_by_default: true  
